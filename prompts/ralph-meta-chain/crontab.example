@@ -1,0 +1,37 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Ralph meta-chain — daily Claude Code cron jobs
+#
+# Order matters: memory → skills → interaction.
+#   - memory feeds skills (skills index atomic notes)
+#   - skills feeds interaction (interaction A/B-tests prompts that call skills)
+#
+# Each entry wraps the prompt in a tight Ralph loop (the "Wiggum" technique:
+# `until ! cat PROMPT | claude-code`). The prompt exits non-zero — or emits
+# <promise>COMPLETE</promise> — when its loop predicate trips:
+#   - budget hit
+#   - zero writes this pass (idempotent no-op)
+#   - $VAULT/90-Meta/STOP exists
+#
+# `timeout` is the hard ClaudeClaw guardrail. `max_iterations` (default 8) is
+# the Anthropic ralph-wiggum safety cutoff, mirrored here as the `i` counter.
+#
+# Install with:   crontab -e   (paste the three entries below; edit RALPH=)
+# Tail logs with: tail -f /var/log/ralph.log
+# ─────────────────────────────────────────────────────────────────────────────
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+RALPH=/path/to/repo/prompts/ralph-meta-chain
+LOG=/var/log/ralph.log
+
+# 1) Memory  — Karpathy LLM-Wiki ingest/lint over 00-Inbox/ + last 7 daily notes
+0 2 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/01-memory-optimizer.md)"      || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 2) Skills — synthesize Claude Code skills from repeated action patterns
+0 3 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/02-skills-optimizer.md)"      || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 3) Interaction — A/B-test prompt rewrites against feedback log
+0 4 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/03-interaction-optimizer.md)" || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# Optional: weekly lint pass (Karpathy's third operation) — Sundays 05:00 UTC
+# 0 5 * * 0 timeout 30m bash -c 'claude -p "$(cat $RALPH/01-memory-optimizer.md) ## ONLY: lint"'  >> $LOG 2>&1

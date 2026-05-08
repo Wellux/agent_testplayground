@@ -1,0 +1,42 @@
+# Ralph meta-chain config — copy to config.yml and edit.
+# Inspirations baked in:
+#   - Anthropic ralph-wiggum plugin: max_iterations + promise_token contract
+#   - Karpathy autoresearch: fixed time-budget per experiment
+#   - Karpathy LLM Wiki: index.md + log.md mandatory; ingest/query/lint ops
+#   - swarmclaw: explicit allow/deny permissions list
+#   - ClaudeClaw: cron-daemon framing (see crontab.example)
+
+vault_path: ~/Obsidian/SecondBrain
+model: claude-sonnet-4-6
+log_level: info
+
+ralph:
+  max_iterations: 8                   # ralph-wiggum safety cutoff per cron firing
+  hard_time_cap_minutes: 25           # outer `timeout` in crontab
+  experiment_minutes: 5               # autoresearch fixed budget per hypothesis
+  promise_token: COMPLETE             # emit <promise>COMPLETE</promise> to exit
+  stop_file: 90-Meta/STOP             # touch to halt the chain on next invocation
+
+budgets:
+  memory:      { max_promotions: 10, max_mocs: 3, max_hypotheses: 5 }
+  skills:      { max_new: 3, max_amended: 5, max_hypotheses: 5 }
+  interaction: { max_user_profile_updates: 1, max_prompt_rewrites: 5, max_ab_experiments: 3 }
+
+trailing_window_days: 7               # how far back each axis looks
+dry_run: false                        # true = print intended writes, touch nothing
+
+permissions:                          # swarmclaw-style allowlist
+  allow:
+    - "Read(**)"
+    - "Write($VAULT/**)"
+    - "Edit($VAULT/**)"
+    - "Bash(mkdir:*,grep:*,find:*,wc:*,jq:*,git status,git log:*,test:*,touch:*)"
+    - "Agent(Explore)"
+    - "Agent(general-purpose)"
+    - "TodoWrite"
+  deny:
+    - "Bash(rm:*)"
+    - "Bash(git push:*)"
+    - "Bash(git reset:*)"
+    - "Bash(curl:*)"
+    - "Bash(wget:*)"
