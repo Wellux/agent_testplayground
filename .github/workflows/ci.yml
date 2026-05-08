@@ -17,9 +17,11 @@ jobs:
       - name: no user-identifier strings in tracked files
         # The Phase 1/2 plan committed (in good faith) that the user's email
         # never lands in any file. Enforce that here.
+        # The pathspec excludes this workflow file itself so the literal
+        # below doesn't self-match.
         run: |
           set -e
-          if git grep -i 'equality.powertothepeople'; then
+          if git grep -in -- "$(printf 'equality\\.power%s' 'tothepeople')" ':!.github/workflows/ci.yml'; then
             echo "::error::user email leaked into tracked files"
             exit 1
           fi
