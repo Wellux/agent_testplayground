@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+# Idempotent installer for the Ralph meta-chain.
+#   - Linux: writes managed crontab entries tagged "# RALPH-managed: <axis>"
+#   - macOS: writes launchd plists at ~/Library/LaunchAgents/ai.ralph.<axis>.plist
+#
+# Reads vault path & paths from prompts/ralph-meta-chain/config.yml.
+# Backs up your existing crontab before any write.
+# Refuses to clobber non-Ralph entries.
+#
+# Usage:
+#   scripts/install.sh              # install (or update)
+#   scripts/install.sh --dry-run    # print intended changes; touch nothing
+#   scripts/install.sh --uninstall  # alias for scripts/uninstall.sh
+
+set -euo pipefail
+
+REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+RALPH="$REPO/prompts/ralph-meta-chain"
+CONFIG="$RALPH/config.yml"
+DRY_RUN=0
+TAG_PREFIX="# RALPH-managed:"
+
+usage() {
+  cat <<USAGE
+install.sh — register the Ralph meta-chain on this machine.
+
+Options:
+  --dry-run     Print intended cron/launchd writes; do not modify the system.
+  --uninstall   Hand off to scripts/uninstall.sh.
+  -h, --help    Show this help.
+
+Reads $CONFIG to resolve vault path; aborts if the file is missing.
+USAGE
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run)    DRY_RUN=1 ;;
+    --uninstall)  exec "$REPO/scripts/uninstall.sh" ;;
+    -h|--help)    usage; exit 0 ;;
+    *)            echo "Unknown arg: $arg" >&2; usage; exit 64 ;;
+  esac
+done
+
+if [[ ! -f "$CONFIG" ]]; then
+  echo "[install] $CONFIG not found." >&2
+  echo "          cp $RALPH/config.example.yml $CONFIG  and edit vault_path." >&2
+  exit 66
+fi
+
+# Tiny YAML reader — we only need vault_path (single-line, no anchors).
+read_yaml() {
+  awk -v key="$1" 'BEGIN{FS=":"} $1==key {sub(/^[^:]+:[ \t]*/,""); gsub(/(^["'\'']|["'\'']$)/,""); print; exit}' "$CONFIG"
+}
+
+VAULT_RAW="$(read_yaml vault_path || true)"
+VAULT="${VAULT_RAW/#\~/$HOME}"
+if [[ -z "$VAULT" ]]; then
+  echo "[install] vault_path missing from $CONFIG" >&2; exit 65
+fi
+if [[ ! -d "$VAULT" ]]; then
+  echo "[install] vault directory does not exist: $VAULT" >&2
+  echo "          create it (e.g. mkdir -p \"$VAULT\") and rerun." >&2
+  exit 66
+fi
+if ! command -v claude >/dev/null 2>&1; then
+  echo "[install] 'claude' (Claude Code CLI) not on PATH" >&2; exit 67
+fi
+
+OS="$(uname -s)"
+LOG="${RALPH_LOG:-$HOME/.ralph.log}"
+TS_BAK="$(date -u +%Y%m%dT%H%M%SZ)"
+
+# ── Cron entries (Linux + manual macOS users) ───────────────────────────────
+linux_cron_lines() {
+  cat <<EOF
+SHELL=/bin/bash
+PATH=$PATH
+RALPH=$RALPH
+$TAG_PREFIX research
+0 1 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/04-research-ingest.md)"      || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX memory
+0 2 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/01-memory-optimizer.md)"     || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX skills
+0 3 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/02-skills-optimizer.md)"     || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX interaction
+0 4 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/03-interaction-optimizer.md)" || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX compress
+30 * * * * timeout 10m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/05-compress.md)"            || [ \$((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+EOF
+}
+
+install_linux() {
+  local existing managed merged
+  existing="$(crontab -l 2>/dev/null || true)"
+  if [[ -n "$existing" ]]; then
+    if [[ $DRY_RUN -eq 0 ]]; then
+      printf '%s\n' "$existing" > "$HOME/.ralph-crontab.bak.$TS_BAK"
+      echo "[install] backed up existing crontab → $HOME/.ralph-crontab.bak.$TS_BAK"
+    fi
+  fi
+
+  # Strip any prior Ralph-managed lines.
+  managed="$(printf '%s\n' "$existing" | awk -v tag="$TAG_PREFIX" '
+    BEGIN { skip=0 }
+    {
+      if (index($0, tag) == 1) { skip=1; next }
+      if (skip == 1 && /^[0-9*]/) { skip=0; next }
+      if (skip == 1) { skip=0 }
+      print
+    }')"
+
+  merged="$(printf '%s\n%s\n' "$managed" "$(linux_cron_lines)")"
+
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "── DRY RUN — would install crontab ──"
+    printf '%s\n' "$merged"
+    return
+  fi
+
+  printf '%s\n' "$merged" | crontab -
+  echo "[install] crontab installed (5 entries: research, memory, skills, interaction, compress)"
+}
+
+# ── launchd plists (macOS) ──────────────────────────────────────────────────
+install_macos() {
+  local LA="$HOME/Library/LaunchAgents"
+  local TMPL="$REPO/scripts/launchd/ai.ralph.axis.plist.tmpl"
+  if [[ ! -f "$TMPL" ]]; then
+    echo "[install] template missing: $TMPL" >&2; exit 70
+  fi
+  mkdir -p "$LA"
+
+  local axes=(research memory skills interaction compress)
+  local hours=(1 2 3 4 -1)            # -1 = hourly
+  local minutes=(0 0 0 0 30)
+  local prompts=(04-research-ingest.md 01-memory-optimizer.md 02-skills-optimizer.md 03-interaction-optimizer.md 05-compress.md)
+  local timeouts=(1500 1500 1500 1500 600)
+  local maxiters=(8 8 8 8 4)
+
+  for i in "${!axes[@]}"; do
+    local axis="${axes[$i]}"
+    local plist="$LA/ai.ralph.$axis.plist"
+    local body
+    body="$(sed \
+      -e "s|@@AXIS@@|$axis|g" \
+      -e "s|@@HOUR@@|${hours[$i]}|g" \
+      -e "s|@@MINUTE@@|${minutes[$i]}|g" \
+      -e "s|@@PROMPT@@|${prompts[$i]}|g" \
+      -e "s|@@TIMEOUT@@|${timeouts[$i]}|g" \
+      -e "s|@@MAXITERS@@|${maxiters[$i]}|g" \
+      -e "s|@@RALPH@@|$RALPH|g" \
+      -e "s|@@LOG@@|$LOG|g" \
+      "$TMPL")"
+
+    if [[ $DRY_RUN -eq 1 ]]; then
+      echo "── DRY RUN — would write $plist ──"
+      printf '%s\n' "$body"
+      continue
+    fi
+
+    printf '%s\n' "$body" > "$plist"
+    launchctl unload "$plist" 2>/dev/null || true
+    launchctl load   "$plist"
+    echo "[install] loaded $plist"
+  done
+}
+
+case "$OS" in
+  Linux)  install_linux ;;
+  Darwin) install_macos ;;
+  *) echo "[install] unsupported OS: $OS" >&2; exit 71 ;;
+esac
+
+echo "[install] done. Tail logs: tail -f $LOG"

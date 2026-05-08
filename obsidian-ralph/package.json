@@ -1,0 +1,19 @@
+{
+  "name": "obsidian-ralph",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Obsidian plugin frontend for the Ralph meta-chain.",
+  "main": "main.js",
+  "scripts": {
+    "build": "node esbuild.config.mjs production",
+    "dev": "node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.21.0",
+    "obsidian": "^1.5.0",
+    "typescript": "^5.4.0"
+  }
+}

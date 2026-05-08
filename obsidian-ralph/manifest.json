@@ -1,0 +1,9 @@
+{
+  "id": "ralph-meta-chain",
+  "name": "Ralph Meta-Chain",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "Drive the Ralph meta-chain (memory / skills / interaction / research / compress) from inside Obsidian. Command palette + status bar + log + metrics views.",
+  "author": "Ralph meta-chain",
+  "isDesktopOnly": true
+}

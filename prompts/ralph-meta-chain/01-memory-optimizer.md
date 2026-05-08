@@ -124,6 +124,12 @@ For each `00-Inbox/` item the digest recommended for promotion (up to
 4. If a tag now has ≥ 3 atomic notes and no MOC exists, create
    `20-MOCs/<tag>.md`. If the MOC exists, append a `## Ralph YYYY-MM-DD`
    section listing newly added notes. Cap MOC writes at `budgets.memory.max_mocs`.
+5. **Embed the new note** via the local harness (Phase 2 RAG):
+   `Bash`: `harness embed --note "<vault-relative-path>"`. The harness
+   stores a row in `$VAULT/90-Meta/embeddings.db` (sqlite-vec + FTS5,
+   `obra/knowledge-graph` schema) using Ollama `nomic-embed-text` by default.
+   On failure (Ollama down / harness missing), log a warning and continue;
+   embeddings are best-effort, not a blocker.
 
 ## Step 5 — Lint (Karpathy LLM-Wiki lint op)
 

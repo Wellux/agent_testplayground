@@ -8,14 +8,18 @@ and rewrites the prompts/skills/playbooks the next run will execute.
 Three drafts live in this folder. Run them once a day, in order, against the
 same vault.
 
-| Order | Cron (UTC)  | Prompt                          | Optimizes                               |
-| ----- | ----------- | ------------------------------- | --------------------------------------- |
-| 1     | `0 2 * * *` | `01-memory-optimizer.md`        | Long-term memory / notes / MOCs         |
-| 2     | `0 3 * * *` | `02-skills-optimizer.md`        | Reusable skills, snippets, playbooks    |
-| 3     | `0 4 * * *` | `03-interaction-optimizer.md`   | Tone, prompt patterns, user preferences |
+| Order | Cron (UTC)   | Prompt                          | Optimizes                               |
+| ----- | ------------ | ------------------------------- | --------------------------------------- |
+| 0     | `0 1 * * *`  | `04-research-ingest.md`         | GitHub-trending feeds → inbox           |
+| 1     | `0 2 * * *`  | `01-memory-optimizer.md`        | Long-term memory / notes / MOCs         |
+| 2     | `0 3 * * *`  | `02-skills-optimizer.md`        | Reusable skills, snippets, playbooks    |
+| 3     | `0 4 * * *`  | `03-interaction-optimizer.md`   | Tone, prompt patterns, user preferences |
+| ★     | `30 * * * *` | `05-compress.md`                | Hourly context compression              |
 
-The order matters: skills are derived from settled memory, and interaction
-heuristics are derived from skills + memory. Run #1 → #2 → #3.
+The order matters: research feeds memory; skills are derived from settled
+memory; interaction heuristics are derived from skills + memory. The
+compressor runs hourly to fight bloat regardless of axis. Run #4 → #1 → #2 → #3
+once a day; run #5 every hour.
 
 ## Vault layout the prompts assume
 
@@ -29,9 +33,27 @@ $VAULT/
   50-Prompts/                # prompt library, including this chain's outputs
   60-Interactions/           # per-thread distillations, user prefs, tone notes
   90-Meta/
-    ralph-log.md             # append-only run log
-    ralph-state.json         # last-run pointers, hashes, open follow-ups
+    index.md                 # Karpathy LLM-Wiki: categorized catalog
+    log.md                   # Karpathy LLM-Wiki: append-only chronological log
+    ralph-state.json         # last-run pointers, hashes, open-promise per axis
+    metrics.ndjson           # one JSON line per experiment
+    embeddings.db            # sqlite-vec + FTS5 (Ollama nomic-embed-text)
+    STOP                     # touch to halt the chain on next invocation
 ```
+
+## Phase 2 surrounding system
+
+This repo also ships:
+
+- `scripts/install.sh` / `uninstall.sh` — idempotent cron (Linux) / launchd
+  (macOS) installer.
+- `obsidian-ralph/` — TypeScript Obsidian plugin: command palette, status
+  bar, log + metrics side panes. Built with esbuild.
+- `harness/` — Python CLI with subcommands `ab`, `embed`, `query`, `ingest`,
+  `compress`. Fixture format follows `promptfoo`. Storage uses `sqlite-vec`
+  + FTS5 (à la `obra/knowledge-graph`). Embeddings via local Ollama.
+- `docs/voice-multidevice-design.md` — Phase G architecture sketch (no code
+  in this PR): Apple Shortcuts + Watch + AirPods + Mac mini server + Alexa.
 
 If a folder is missing, the prompt creates it on first run.
 

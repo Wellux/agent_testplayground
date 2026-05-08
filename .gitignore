@@ -1,0 +1,45 @@
+# Local config (never commit the user's actual vault path / secrets)
+prompts/ralph-meta-chain/config.yml
+*.local.yml
+*.local.yaml
+
+# Secrets
+.env
+.env.*
+!.env.example
+**/secrets.local
+**/secrets.local.*
+
+# Obsidian plugin build artifacts
+obsidian-ralph/main.js
+obsidian-ralph/node_modules/
+obsidian-ralph/.npm/
+obsidian-ralph/dist/
+
+# Harness build/run artifacts
+harness/.venv/
+harness/__pycache__/
+harness/**/__pycache__/
+harness/.pytest_cache/
+harness/.uv/
+harness/dist/
+harness/*.egg-info/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Vault sidecars (in case vault is ever symlinked into repo)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Template for Ralph meta-chain launchd agents on macOS.
+
+  Placeholders (substituted by scripts/install.sh):
+    @@AXIS@@      research | memory | skills | interaction | compress
+    @@HOUR@@      0..23, or -1 for hourly (then StartCalendarInterval omits Hour)
+    @@MINUTE@@    0..59
+    @@PROMPT@@    file under $RALPH/ to feed claude -p
+    @@TIMEOUT@@   seconds for `timeout` outer wrapper (1500 daily, 600 compress)
+    @@MAXITERS@@  inner Ralph max iterations (8 daily, 4 compress)
+    @@RALPH@@     absolute path to prompts/ralph-meta-chain
+    @@LOG@@       absolute path to log file
+
+  When @@HOUR@@ is -1, install.sh removes the <key>Hour</key>+<integer/> pair
+  to make the job fire every hour at @@MINUTE@@.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>ai.ralph.@@AXIS@@</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>i=0; until ! /usr/bin/env timeout @@TIMEOUT@@ claude -p "$(cat @@RALPH@@/@@PROMPT@@)" || [ $((i+=1)) -ge @@MAXITERS@@ ]; do :; done</string>
+  </array>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>@@HOUR@@</integer>
+    <key>Minute</key>
+    <integer>@@MINUTE@@</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>@@LOG@@</string>
+  <key>StandardErrorPath</key>
+  <string>@@LOG@@</string>
+
+  <key>RunAtLoad</key>
+  <false/>
+
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+  </dict>
+</dict>
+</plist>

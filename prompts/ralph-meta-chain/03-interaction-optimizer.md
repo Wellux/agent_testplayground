@@ -96,26 +96,34 @@ note in `30-Notes/` with `type: hypothesis, axis: interaction`:
 Each candidate prompt is staged at `50-Prompts/<name>.candidate.md` (do not
 overwrite the incumbent yet).
 
-## Step 4 — A/B (Karpathy autoresearch fixed-time)
+## Step 4 — A/B via the Phase 2 harness (`promptfoo`-shaped fixtures)
 
 For each candidate (cap `budgets.interaction.max_ab_experiments`):
 
-1. Pick a fixture from `60-Interactions/fixtures/*.md`. If none exists, scaffold
-   one from the most-recent matching daily-note transcript and store it.
-2. Run **incumbent** prompt against the fixture using a sub-`Agent` (subagent_type
-   = `general-purpose`). Cap at `ralph.experiment_minutes` halved.
-3. Run **candidate** prompt against the same fixture, same cap.
-4. Score each output on a self-rubric (1–5) for: brevity, helpfulness,
-   format-compliance, banned-phrase count.
-5. Append two JSON lines to `90-Meta/metrics.ndjson`:
-
-   ```json
-   {"axis":"interaction","prompt":"<name>","arm":"incumbent","tokens":<int>,"rubric":<float>,"banned":<int>}
-   {"axis":"interaction","prompt":"<name>","arm":"candidate","tokens":<int>,"rubric":<float>,"banned":<int>}
+1. Pick (or scaffold) a fixture from `harness/fixtures/<name>.yml`
+   (promptfoo schema). If none exists, scaffold one from the most-recent
+   matching daily-note transcript and store it.
+2. `Bash`:
+   ```bash
+   harness ab \
+     --incumbent  50-Prompts/<name>.md \
+     --candidate  50-Prompts/<name>.candidate.md \
+     --fixture    harness/fixtures/<name>.yml \
+     --judge-model claude-sonnet-4-6
    ```
-
-6. **Decision rule**: keep candidate iff `rubric_candidate ≥ rubric_incumbent`
-   AND (`tokens_candidate ≤ tokens_incumbent` OR `banned_candidate < banned_incumbent`).
+   The harness:
+   - runs both arms via the Anthropic SDK (deterministic temperature),
+   - calls a rubric LLM judge for brevity / helpfulness / format /
+     banned-phrase count,
+   - appends two ndjson rows to `$VAULT/90-Meta/metrics.ndjson`,
+   - returns exit code `0` if candidate wins, `1` if incumbent wins, `2` tie.
+3. **Decision rule** (enforced by the harness): keep candidate iff
+   `rubric_candidate ≥ rubric_incumbent` AND
+   (`tokens_candidate ≤ tokens_incumbent` OR
+    `banned_candidate < banned_incumbent`).
+4. If multiple candidates were staged this pass, run them as a Hermes-style
+   GEPA population: keep the top-1, archive the rest under
+   `50-Prompts/_rejected/<name>-<date>.md`.
 
 ## Step 5 — Rewrite winners
 

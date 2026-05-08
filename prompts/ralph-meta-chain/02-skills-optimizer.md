@@ -14,6 +14,15 @@ skills, and re-validates stale skills against their canonical experiments.
 
 - **charlie947/ai-second-brain** — Claude Code skill that turns chat history
   into a Karpathy-style second brain. Skill-file frontmatter mirrored below.
+- **NousResearch/hermes-agent** — *self-improving AI agent that creates skills
+  from experience, improves them during use, searches its own past
+  conversations*. We adopt the **skills-from-experience** rule: any action
+  pattern observed ≥ 2× in the trailing window becomes a candidate skill.
+- **NousResearch/hermes-agent-self-evolution** — DSPy + GEPA evolutionary
+  optimization. We borrow the **population-A/B** idea: when amending a stale
+  skill, generate 3 candidate variants and let `harness ab` keep the best.
+- **0xNyk/awesome-hermes-agent** — community skill registry; mirror its
+  per-skill README structure for `40-Skills/<slug>.md`.
 - **Anthropic claude-code skills system** — `.claude/skills/<name>.md` with a
   `description` containing trigger phrases.
 - **Karpathy autoresearch** — fixed-time experiments; ~12/hr, ~100 overnight.
@@ -104,21 +113,24 @@ Replay the most recent matching invocation in a scratch worktree; assert
 exit 0 and PR URL parsable. Time-cap: `ralph.experiment_minutes`.
 ```
 
-## Step 4 — Amend stale skills
+## Step 4 — Amend stale skills (Hermes-style population A/B)
 
 For each skill whose `last_validated` is > 14d old (capped at
 `budgets.skills.max_amended`):
 
 1. Re-run its **canonical experiment** within `ralph.experiment_minutes`.
-2. Append exactly one JSON line to `90-Meta/metrics.ndjson`:
-
-   ```json
-   {"axis":"skills","skill":"<name>","started":"<ISO>","duration_s":<int>,"metric":"success","value":0|1,"mean_tokens":<int>,"verdict":"validated|refuted"}
-   ```
-
-3. `Edit` the skill file: bump `last_validated`, refresh `metrics`, and
-   append a `## Ralph YYYY-MM-DD` section recording the result. If refuted
-   twice in a row, set `status: deprecated` (still never delete).
+2. **GEPA-style population**: generate 3 candidate edits (e.g. tighter
+   trigger phrases, shortened steps, added failure mode). Stage each at
+   `40-Skills/<slug>.candidate-N.md`.
+3. `Bash`: `harness ab --incumbent 40-Skills/<slug>.md --candidate
+   40-Skills/<slug>.candidate-N.md --fixture <skill-canonical-fixture>` for
+   each candidate. The harness writes 2 metrics lines per call.
+4. Keep the winner (per the harness's exit code: 0 = candidate wins);
+   archive losers to `40-Skills/_rejected/<slug>-<date>.md`.
+5. `Edit` the surviving skill file: bump `last_validated`, refresh `metrics`,
+   and append a `## Ralph YYYY-MM-DD` section recording the result. If
+   refuted twice in a row, set `status: deprecated` (still never delete).
+6. `Bash`: `harness embed --note 40-Skills/<slug>.md` to refresh embeddings.
 
 ## Step 5 — Cross-link
 
