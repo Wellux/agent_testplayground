@@ -178,3 +178,25 @@ jobs:
         run: npm run build
       - name: artifact present
         run: test -s main.js && wc -c main.js
+
+  bats:
+    name: bats stubs (Round 5 + Round 4 + Round 7)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install bats-core
+        run: |
+          set -e
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bats
+          bats --version
+      - name: run bats stubs (test_harness.bats deferred to python job)
+        run: |
+          set -e
+          # test_harness.bats needs the harness python deps (httpx,
+          # pyyaml). The python job already covers that surface via
+          # harness/tests/test_*.py — no need to duplicate.
+          bats prompts/ralph-meta-chain/tests/test_shell_scripts.bats
+          bats prompts/ralph-meta-chain/tests/test_migration_dry_run.bats
+          bats prompts/ralph-meta-chain/tests/test_frontmatter_validation.bats
+          bats prompts/ralph-meta-chain/tests/test_round7_indexes_benchmarks.bats

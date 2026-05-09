@@ -92,15 +92,37 @@ ralph_require_repo() {
 }
 
 # Append a Karpathy-format line to migration-log.md.
+# Truncates the head when the file exceeds RALPH_MIGRATION_LOG_MAX_LINES
+# (default 500); the tail is what's audit-relevant. Truncation message
+# is itself appended so the file stays self-describing.
 ralph_migration_log_append() {
   local op="$1"; shift
   local kvs="$*"
   local mig
   mig="$(ralph_migration_dir)"
+  local log="$mig/migration-log.md"
+  local cap="${RALPH_MIGRATION_LOG_MAX_LINES:-500}"
   mkdir -p "$mig"
+
+  # Rotate if we're about to exceed the cap.
+  if [[ -f "$log" ]]; then
+    local lines
+    lines="$(wc -l < "$log" | tr -d ' ')"
+    if [[ "$lines" -gt "$cap" ]]; then
+      local keep=$((cap / 2))
+      local tmp="${log}.tmp.$$"
+      {
+        printf '## [%s] migration | op=log-rotate kept=%d dropped=%d\n' \
+          "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$keep" "$((lines - keep))"
+        tail -n "$keep" "$log"
+      } > "$tmp"
+      mv "$tmp" "$log"
+    fi
+  fi
+
   printf '## [%s] migration | op=%s %s\n' \
     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$op" "$kvs" \
-    >> "$mig/migration-log.md"
+    >> "$log"
 }
 
 # Atomic file write: write to .tmp then rename.

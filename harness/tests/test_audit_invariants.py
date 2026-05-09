@@ -109,19 +109,24 @@ class JSONSchemaValidity(unittest.TestCase):
 class MigrationPipelineReadyForStageC(unittest.TestCase):
     """The Stage C apply gate refuses unless the read-only pipeline
     produces zero conflicts. Verifying this in Python keeps Stage C
-    eligibility green between every push."""
+    eligibility green between every push.
 
-    def setUp(self) -> None:
+    Pipeline runs ONCE per test class (setUpClass), not per test —
+    each propose run is ~5 s on this repo, so caching shaves > 30 s
+    off the full suite."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
         scripts = MIGRATION / "scripts"
-        self.assertTrue((scripts / "ralph_repo_inventory.sh").exists())
-        # Run the read-only path to populate the ndjson artifacts.
+        assert (scripts / "ralph_repo_inventory.sh").exists()
         for s in (
             "ralph_repo_inventory.sh",
             "ralph_classify_repo_files.sh",
             "ralph_propose_migration.sh",
         ):
             rc, _, err = _run([str(scripts / s)])
-            self.assertEqual(rc, 0, f"{s} failed: {err}")
+            if rc != 0:
+                raise AssertionError(f"{s} failed: {err}")
 
     def test_proposed_moves_present_with_archived_count(self) -> None:
         moves = (MIGRATION / "proposed-moves.md").read_text()
