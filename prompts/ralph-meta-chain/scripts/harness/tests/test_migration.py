@@ -10,7 +10,16 @@ import subprocess
 import sys
 import unittest
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
+def _find_repo_root() -> pathlib.Path:
+    p = pathlib.Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / ".git").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("no .git ancestor found")
+
+
+REPO = _find_repo_root()
 SCRIPTS = REPO / "prompts" / "ralph-meta-chain" / "migration" / "scripts"
 MIG_DIR = REPO / "prompts" / "ralph-meta-chain" / "migration"
 
@@ -100,23 +109,28 @@ class ClassifyAndPropose(unittest.TestCase):
         self.assertIn("# Proposed Moves", moves)
 
     def test_propose_retargets_pre_migrated_to_archive(self) -> None:
-        """Pre-Round-8 audit: when a target path already exists (because
-        an earlier round superseded it), the source must be retargeted
-        to migration/_archive/_pre-migrated/ rather than reported as a
-        conflict. Round 6 shipped obsidian-plugin/, so every legacy
-        obsidian-ralph/ file should retarget."""
+        """Pre-Round-8: when a target path already exists (an earlier
+        round superseded it), the source must be retargeted to
+        migration/_archive/_pre-migrated/ rather than reported as a
+        conflict. Post-Round-8: nothing left to retarget — but conflicts
+        must still report zero."""
         _run([str(SCRIPTS / "ralph_propose_migration.sh")])
         moves = (MIG_DIR / "proposed-moves.md").read_text()
         conflicts = (MIG_DIR / "conflicts.md").read_text()
-        self.assertIn(
-            "_archive/_pre-migrated/", moves,
-            "expected _archive/_pre-migrated/ retargets in proposed-moves.md",
-        )
-        self.assertIn(
-            "obsidian-ralph/", moves,
-            "obsidian-ralph/ should appear in retargeted moves",
-        )
-        self.assertIn("(none)", conflicts, "expected zero conflicts post-audit")
+        self.assertIn("(none)", conflicts, "conflicts.md must always be (none)")
+        # Pre-Round-8 only: assert the retarget mechanism worked. Detect
+        # by presence of obsidian-ralph/ at the repo root (Phase 1-6
+        # reference still alive). After Stage C, that dir is empty/gone
+        # and the assertion is vacuous; skip rather than fail.
+        if (REPO / "obsidian-ralph" / "manifest.json").exists():
+            self.assertIn(
+                "_archive/_pre-migrated/", moves,
+                "expected _archive/_pre-migrated/ retargets in proposed-moves.md",
+            )
+            self.assertIn(
+                "obsidian-ralph/", moves,
+                "obsidian-ralph/ should appear in retargeted moves",
+            )
 
 
 class ApplyGates(unittest.TestCase):
@@ -152,9 +166,11 @@ class RollbackGates(unittest.TestCase):
             self.skipTest("rollback-plan.md not generated (likely conflicts)")
         rc, out, err = _run([str(SCRIPTS / "ralph_rollback_migration.sh")])
         self.assertEqual(rc, 64)
-        # `ralph_log` writes "DRY RUN" to stderr; the inverse moves go to stdout.
+        # `ralph_log` writes "DRY RUN" to stderr; the inverse moves go to
+        # stdout. Post-Stage-C the rollback plan has 0 inverse moves so
+        # stdout is empty — but the DRY RUN message on stderr is the
+        # canonical signal that the script defaulted to dry-run.
         self.assertIn("DRY RUN", err)
-        self.assertIn("git mv", out)
 
 
 class CommonShOK(unittest.TestCase):

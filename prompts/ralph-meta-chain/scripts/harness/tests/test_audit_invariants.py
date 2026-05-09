@@ -8,7 +8,16 @@ import pathlib
 import subprocess
 import unittest
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
+def _find_repo_root() -> pathlib.Path:
+    p = pathlib.Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / ".git").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("no .git ancestor found")
+
+
+REPO = _find_repo_root()
 RMC = REPO / "prompts" / "ralph-meta-chain"
 SCRIPTS = RMC / "scripts"
 MIGRATION = RMC / "migration"
@@ -145,15 +154,18 @@ class MigrationPipelineReadyForStageC(unittest.TestCase):
                       "Stage C apply gate would refuse — conflicts present")
 
     def test_rollback_plan_covers_every_move(self) -> None:
+        """Pre-Stage-C: 50+ moves expected; rollback mirrors. Post-Stage-C
+        (the apply has run): both files should reflect the 0-moves state
+        — propose still produces a valid (if mostly empty) plan.
+        Either way: rollback row count == moves row count."""
         moves = (MIGRATION / "proposed-moves.md").read_text()
         rollback = (MIGRATION / "rollback-plan.md").read_text()
-        # Count rows in each (≥ 5 rows means populated).
         moves_rows = [l for l in moves.splitlines() if l.startswith("| ") and "|" in l[2:]]
         rollback_rows = [l for l in rollback.splitlines() if l.startswith("| ") and "|" in l[2:]]
-        self.assertGreaterEqual(len(moves_rows), 50,
-                                "expected ≥ 50 rows in proposed-moves.md")
-        self.assertGreaterEqual(len(rollback_rows), 50,
-                                "rollback-plan.md should mirror moves count")
+        # Same shape — only header rows when 0 moves; or 50+ rows when
+        # the legacy tree has not yet been migrated.
+        self.assertEqual(len(moves_rows), len(rollback_rows),
+                         "rollback row count must mirror moves row count")
 
     def test_apply_default_dry_run_exits_64(self) -> None:
         rc, _, _ = _run(

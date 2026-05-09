@@ -103,28 +103,41 @@ LOG="${RALPH_LOG:-$HOME/.ralph.log}"
 TS_BAK="$(date -u +%Y%m%dT%H%M%SZ)"
 
 # ── Cron entries (Linux + manual macOS users) ───────────────────────────────
+# Each cron line wraps `claude -p` in a loop that breaks on either:
+#   (a) <promise>COMPLETE</promise> in the captured output,
+#   (b) claude exits non-zero, or
+#   (c) iteration cap reached.
+# Inside the heredoc, single quotes embedded in the bash -c argument use
+# the standard '\'' close-then-reopen pattern — appears verbose but is
+# the only safe form across shells.
 linux_cron_lines() {
-  cat <<EOF
+  cat <<'EOF_HEADER'
 SHELL=/bin/bash
-PATH=$PATH
-RALPH=$RALPH
-$TAG_PREFIX research
-0 1 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/04-research-ingest.md)"      || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX memory
-0 2 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/01-memory-optimizer.md)"     || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX skills
-0 3 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/02-skills-optimizer.md)"     || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX interaction
-0 4 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/03-interaction-optimizer.md)" || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX compress
-30 * * * * timeout 10m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/05-compress.md)"            || [ \$((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX heal
-15 */6 * * * timeout 10m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/06-autoheal.md)"          || [ \$((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX evolve
-0 5 * * 0 timeout 30m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/07-autoevolve.md)"           || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
-$TAG_PREFIX update
-0 6 * * 1 timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/08-autoupdate.md)"           || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
-EOF
+PATH=__PATH__
+RALPH=__RALPH__
+EOF_HEADER
+
+  local entries=(
+    "research|0 1 * * *|25m|8|04-research-ingest.md"
+    "memory|0 2 * * *|25m|8|01-memory-optimizer.md"
+    "skills|0 3 * * *|25m|8|02-skills-optimizer.md"
+    "interaction|0 4 * * *|25m|8|03-interaction-optimizer.md"
+    "compress|30 * * * *|10m|4|05-compress.md"
+    "heal|15 */6 * * *|10m|4|06-autoheal.md"
+    "evolve|0 5 * * 0|30m|8|07-autoevolve.md"
+    "update|0 6 * * 1|25m|8|08-autoupdate.md"
+  )
+  for entry in "${entries[@]}"; do
+    IFS='|' read -r axis sched cap iters prompt <<<"$entry"
+    echo "$TAG_PREFIX $axis"
+    echo "$sched timeout $cap bash -c 'i=0; while [ \$((i+=1)) -le $iters ]; do o=\$(claude -p \"\$(cat \$RALPH/$prompt)\" 2>&1); rc=\$?; printf '\''%s\n'\'' \"\$o\"; case \"\$o\" in *\"<promise>COMPLETE</promise>\"*) break;; esac; [ \$rc -ne 0 ] && break; done' >> $LOG 2>&1"
+  done
+}
+
+# After linux_cron_lines emits the header, sed-substitute the literal
+# placeholders (so the heredoc doesn't expand $PATH inside its quoted form).
+linux_cron_lines_rendered() {
+  linux_cron_lines | sed -e "s|__PATH__|$PATH|g" -e "s|__RALPH__|$RALPH|g"
 }
 
 install_linux() {
@@ -147,7 +160,7 @@ install_linux() {
       print
     }')"
 
-  merged="$(printf '%s\n%s\n' "$managed" "$(linux_cron_lines)")"
+  merged="$(printf '%s\n%s\n' "$managed" "$(linux_cron_lines_rendered)")"
 
   if [[ $DRY_RUN -eq 1 ]]; then
     echo "── DRY RUN — would install crontab ──"

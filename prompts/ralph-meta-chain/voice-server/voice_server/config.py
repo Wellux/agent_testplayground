@@ -8,8 +8,19 @@ from typing import Any
 
 
 def repo_root() -> pathlib.Path:
-    """Walk up from this file to the repo root (parent of voice-server/)."""
-    return pathlib.Path(__file__).resolve().parents[2]
+    """Walk up from this file to the repo root (looks for .git).
+
+    Pre-Round-8 voice-server lived at <repo>/voice-server/, so parents[2]
+    was the repo root. Post-Round-8 it lives at
+    <repo>/prompts/ralph-meta-chain/voice-server/, so a fixed parents[N]
+    would tie the server to one specific layout. Walk-up makes it work
+    in either."""
+    p = pathlib.Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / ".git").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("voice-server: no .git ancestor found")
 
 
 def load_ralph_config() -> dict[str, Any]:

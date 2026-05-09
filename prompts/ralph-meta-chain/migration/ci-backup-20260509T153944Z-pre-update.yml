@@ -1,27 +1,3 @@
-# .github/workflows/ci.yml AS IT WILL LOOK AFTER ROUND 8 STAGE C
-#
-# This file is the proposed post-apply CI workflow. It updates
-# `working-directory:` paths to the master-spec target locations:
-#
-#   harness/          → prompts/ralph-meta-chain/scripts/harness/
-#   voice-server/     → prompts/ralph-meta-chain/voice-server/
-#   obsidian-ralph/   → ARCHIVED (Round 6 superseded; job removed)
-#   scripts/install.sh → prompts/ralph-meta-chain/install/install_cron.sh
-#
-# `ralph_apply_migration.sh --apply --confirmed --update-ci` (Round 8
-# Stage C) optionally copies this file in place of .github/workflows/ci.yml.
-# Default: --update-ci is OFF, so the apply does only `git mv`.
-#
-# To preview the diff against the live CI workflow:
-#   diff -u .github/workflows/ci.yml \
-#           prompts/ralph-meta-chain/migration/STAGE_C_CI_WORKFLOW.yml
-#
-# To apply manually (post-Stage-C, if --update-ci was not used):
-#   cp prompts/ralph-meta-chain/migration/STAGE_C_CI_WORKFLOW.yml \
-#      .github/workflows/ci.yml
-#   git add .github/workflows/ci.yml
-#   git commit -m "ci: post-Round-8 working-directory updates"
-
 name: ci
 
 on:
@@ -39,6 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: no user-identifier strings in tracked files
+        # The Phase 1/2 plan committed (in good faith) that the user's email
+        # never lands in any file. Enforce that here.
+        # The pathspec excludes this workflow file itself so the literal
+        # below doesn't self-match.
         run: |
           set -e
           if git grep -in -- "$(printf 'equality\\.power%s' 'tothepeople')" ':!.github/workflows/ci.yml'; then
@@ -113,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: prompts/ralph-meta-chain/scripts/harness
+        working-directory: harness
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -137,7 +117,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: prompts/ralph-meta-chain/voice-server
+        working-directory: voice-server
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -156,7 +136,29 @@ jobs:
         run: python -m unittest discover -s tests -v
 
   plugin:
-    name: obsidian-plugin (typescript, master-spec target)
+    name: obsidian-ralph (typescript, Phase 1-6 reference)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: obsidian-ralph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: obsidian-ralph/package-lock.json
+      - name: npm ci
+        run: npm ci --no-audit --no-fund
+      - name: tsc --noEmit
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: build
+        run: npm run build
+      - name: artifact present
+        run: test -s main.js && wc -c main.js
+
+  plugin-greenfield:
+    name: obsidian-plugin (typescript, Round 6 greenfield)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -191,8 +193,9 @@ jobs:
       - name: run bats stubs (test_harness.bats deferred to python job)
         run: |
           set -e
-          # test_harness.bats needs the harness python deps; the python
-          # job covers that surface via harness/tests/test_*.py.
+          # test_harness.bats needs the harness python deps (httpx,
+          # pyyaml). The python job already covers that surface via
+          # harness/tests/test_*.py — no need to duplicate.
           bats prompts/ralph-meta-chain/tests/test_shell_scripts.bats
           bats prompts/ralph-meta-chain/tests/test_migration_dry_run.bats
           bats prompts/ralph-meta-chain/tests/test_frontmatter_validation.bats

@@ -181,7 +181,16 @@ export default class RalphPlugin extends Plugin {
     this.addCommand({
       id: "ralph-create-business-approval",
       name: "Ralph: Create Business Approval Request",
-      callback: () => this.openVaultFile("business-entity/ledgers/pending-approvals.md"),
+      // install.sh seeds pending-approvals.md into the vault at
+      // 07_Business/pending-approvals.md (Round-2 master-spec layout).
+      // The repo-side business-entity/ledgers/pending-approvals.md is
+      // the SCHEMA source — copied during seed but lives at a different
+      // vault path. Try the seeded path first; fall back to the schema
+      // path so trees that haven't been seeded still find SOMETHING.
+      callback: () => this.openVaultFileWithFallback([
+        "07_Business/pending-approvals.md",
+        "business-entity/ledgers/pending-approvals.md",
+      ]),
     });
 
     this.addCommand({
@@ -264,7 +273,14 @@ export default class RalphPlugin extends Plugin {
     } else {
       newFront = front.trimEnd() + `\n${key}: ${value}\n`;
     }
-    await fs.writeFile(full, "---" + newFront + "---" + rest, "utf8");
+    // Normalize: ensure exactly one trailing newline so the closing
+    // `---` always starts on its own line. Without this, when the
+    // regex replaces an existing line (or appends a new one without
+    // a trailing newline), the rewrite glues `<value>---` together
+    // and downstream YAML parsers see corrupt frontmatter. Mirrors
+    // the harness/reflect.py fix.
+    const normalizedFront = newFront.replace(/\n+$/, "") + "\n";
+    await fs.writeFile(full, "---" + normalizedFront + "---" + rest, "utf8");
   }
 
   private async openVaultFile(rel: string) {
@@ -278,6 +294,24 @@ export default class RalphPlugin extends Plugin {
     } else {
       new Notice(`Ralph: ${rel} not found in vault`);
     }
+  }
+
+  // Open the first path that exists in the vault. Useful when the same
+  // logical file might live at the seeded path OR the schema-source path
+  // (e.g. pending-approvals.md → 07_Business/ vs business-entity/ledgers/).
+  private async openVaultFileWithFallback(rels: string[]) {
+    if (!this.settings.vaultRoot) {
+      new Notice("Ralph: vaultRoot not set");
+      return;
+    }
+    for (const rel of rels) {
+      const file = this.app.vault.getAbstractFileByPath(rel);
+      if (file && "path" in file) {
+        await this.app.workspace.getLeaf().openFile(file as never);
+        return;
+      }
+    }
+    new Notice(`Ralph: none of ${rels.join(" / ")} found in vault`);
   }
 
   private async runVaultDiagnostics() {

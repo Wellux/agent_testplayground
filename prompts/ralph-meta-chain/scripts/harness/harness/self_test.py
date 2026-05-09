@@ -38,7 +38,29 @@ class CheckResult:
 
 
 def _repo_root() -> pathlib.Path:
-    return pathlib.Path(__file__).resolve().parents[2]
+    """Walk up from this module to find the repo root (looks for .git).
+
+    Pre-Round-8 the harness lived at <repo>/harness/, so parents[2] was
+    the repo root. Post-Round-8 it lives at
+    <repo>/prompts/ralph-meta-chain/scripts/harness/, so a fixed
+    parents[N] would tie self-test to one specific layout. Walk-up makes
+    it work in both layouts (and any future migration too).
+    """
+    p = pathlib.Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / ".git").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("self_test: no .git ancestor found")
+
+
+# Master-spec target paths, post-Round-8.
+# Each helper accepts a `repo` arg (so tests can override) and falls
+# through to defaults rooted at repo / <master-spec target>.
+HARNESS_RELPATH = "prompts/ralph-meta-chain/scripts/harness"
+VOICE_SERVER_RELPATH = "prompts/ralph-meta-chain/voice-server"
+PLUGIN_RELPATH = "prompts/ralph-meta-chain/obsidian-plugin"
+INSTALL_DIR_RELPATH = "prompts/ralph-meta-chain/install"
 
 
 def _run(cmd: list[str], cwd: pathlib.Path, timeout: int = 120) -> tuple[int, str, float]:
@@ -76,7 +98,15 @@ def _check_privacy(repo: pathlib.Path) -> CheckResult:
 def _check_shell(repo: pathlib.Path) -> CheckResult:
     started = _dt.datetime.now()
     rcs = []
-    for f in ("scripts/install.sh", "scripts/uninstall.sh"):
+    # Master-spec target paths; falls back to legacy scripts/ for
+    # pre-Round-8 trees.
+    candidates = (
+        f"{INSTALL_DIR_RELPATH}/install_cron.sh",
+        f"{INSTALL_DIR_RELPATH}/uninstall_cron.sh",
+        "scripts/install.sh",          # legacy
+        "scripts/uninstall.sh",         # legacy
+    )
+    for f in candidates:
         if not (repo / f).exists():
             continue
         rc, _, _ = _run(["bash", "-n", f], cwd=repo, timeout=10)
@@ -94,7 +124,15 @@ def _check_shell(repo: pathlib.Path) -> CheckResult:
 def _check_python(repo: pathlib.Path) -> CheckResult:
     started = _dt.datetime.now()
     targets: list[str] = []
-    for sub in ("harness/harness", "voice-server/voice_server"):
+    # Master-spec target paths; falls back to legacy roots for
+    # pre-Round-8 trees.
+    candidates = (
+        f"{HARNESS_RELPATH}/harness",
+        f"{VOICE_SERVER_RELPATH}/voice_server",
+        "harness/harness",                  # legacy
+        "voice-server/voice_server",         # legacy
+    )
+    for sub in candidates:
         d = repo / sub
         if d.exists():
             targets.extend(str(p) for p in d.glob("*.py"))
@@ -112,9 +150,13 @@ def _check_python(repo: pathlib.Path) -> CheckResult:
 
 def _check_unit_tests(repo: pathlib.Path) -> CheckResult:
     started = _dt.datetime.now()
+    # Master-spec target path first; legacy fallback.
+    cwd = repo / HARNESS_RELPATH
+    if not cwd.exists():
+        cwd = repo / "harness"
     rc, out, elapsed = _run(
         [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
-        cwd=repo / "harness", timeout=120,
+        cwd=cwd, timeout=120,
     )
     return CheckResult(
         name="unit-tests", started=started.isoformat(), duration_s=elapsed,
@@ -124,7 +166,12 @@ def _check_unit_tests(repo: pathlib.Path) -> CheckResult:
 
 def _check_plugin(repo: pathlib.Path) -> CheckResult:
     started = _dt.datetime.now()
-    plugin = repo / "obsidian-ralph"
+    # Master-spec target plugin first; legacy obsidian-ralph as fallback
+    # (it is now archived under migration/_archive/_pre-migrated/ but a
+    # pre-Round-8 checkout would still find it here).
+    plugin = repo / PLUGIN_RELPATH
+    if not plugin.exists():
+        plugin = repo / "obsidian-ralph"
     if not (plugin / "node_modules").exists():
         return CheckResult(
             name="plugin", started=started.isoformat(), duration_s=0.0,

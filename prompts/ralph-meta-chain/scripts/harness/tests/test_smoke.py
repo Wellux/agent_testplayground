@@ -8,7 +8,16 @@ import sys
 import tempfile
 import unittest
 
-REPO = pathlib.Path(__file__).resolve().parents[2]
+def _find_repo_root() -> pathlib.Path:
+    p = pathlib.Path(__file__).resolve().parent
+    while p != p.parent:
+        if (p / ".git").exists():
+            return p
+        p = p.parent
+    raise RuntimeError("no .git ancestor found")
+
+
+REPO = _find_repo_root()
 sys.path.insert(0, str(REPO / "harness"))
 
 

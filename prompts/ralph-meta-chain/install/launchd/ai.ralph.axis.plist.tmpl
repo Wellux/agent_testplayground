@@ -33,7 +33,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>i=0; until ! @@TIMEOUT_BIN@@ @@TIMEOUT@@ claude -p "$(cat @@RALPH@@/@@PROMPT@@)" || [ $((i+=1)) -ge @@MAXITERS@@ ]; do :; done</string>
+    <string>i=0; while [ $((i+=1)) -le @@MAXITERS@@ ]; do o=$(@@TIMEOUT_BIN@@ @@TIMEOUT@@ claude -p "$(cat @@RALPH@@/@@PROMPT@@)" 2>&1); rc=$?; printf '%s\n' "$o"; case "$o" in *"&lt;promise&gt;COMPLETE&lt;/promise&gt;"*) break;; esac; [ $rc -ne 0 ] &amp;&amp; break; done</string>
   </array>
 
   <key>StartCalendarInterval</key>
