@@ -3,7 +3,7 @@ description: |
   Triggers: "ralph autoheal", "self-test", "run the local CI mirror", "are we healthy"
 allowed-tools:
   - "Read"
-  - "Bash(harness:*,git:*)"
+  - "Bash(harness:*)"
 ---
 
 # /ralph-autoheal

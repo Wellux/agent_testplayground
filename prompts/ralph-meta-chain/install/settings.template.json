@@ -8,6 +8,9 @@
       "Bash(mkdir:*,grep:*,find:*,wc:*,jq:*,git status,git log:*,test:*,touch:*,mv:*)",
       "Bash(uv:*,python:*,python3:*,node:*,npm:*)",
       "Bash(harness:*,ollama:*)",
+      "Bash(prompts/ralph-meta-chain/migration/scripts/ralph_repo_inventory.sh:*)",
+      "Bash(prompts/ralph-meta-chain/migration/scripts/ralph_classify_repo_files.sh:*)",
+      "Bash(prompts/ralph-meta-chain/migration/scripts/ralph_propose_migration.sh:*)",
       "Agent(Explore)",
       "Agent(general-purpose)",
       "TodoWrite"
