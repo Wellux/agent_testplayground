@@ -1,0 +1,67 @@
+{
+  "manifest": {
+    "publishingInformation": {
+      "locales": {
+        "en-US": {
+          "name": "Ralph",
+          "summary": "Talk to your second brain.",
+          "description": "Drop a quick thought into your Obsidian inbox, ask for status, or kick off a memory pass.",
+          "examplePhrases": [
+            "Alexa, tell Ralph my idea is to use sqlite-vec for embeddings.",
+            "Alexa, ask Ralph for status.",
+            "Alexa, tell Ralph to pause."
+          ],
+          "smallIconUri": "https://example.invalid/ralph-small.png",
+          "largeIconUri": "https://example.invalid/ralph-large.png"
+        }
+      },
+      "isAvailableWorldwide": false,
+      "distributionCountries": ["US"],
+      "category": "PRODUCTIVITY",
+      "testingInstructions": "All endpoints require a Cloudflare Tunnel pointed at the Mac mini voice-server. The skill never receives audio."
+    },
+    "apis": {
+      "custom": {
+        "endpoint": {
+          "uri": "arn:aws:lambda:us-east-1:000000000000:function:ralph-skill",
+          "sslCertificateType": "Trusted"
+        },
+        "interfaces": []
+      }
+    },
+    "manifestVersion": "1.0",
+    "permissions": []
+  },
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "ralph",
+      "intents": [
+        { "name": "AMAZON.StopIntent", "samples": [] },
+        { "name": "AMAZON.HelpIntent", "samples": [] },
+        { "name": "AMAZON.CancelIntent", "samples": [] },
+        {
+          "name": "CaptureIntent",
+          "samples": [
+            "my idea is {Thought}",
+            "remember {Thought}",
+            "capture {Thought}",
+            "note {Thought}"
+          ],
+          "slots": [{ "name": "Thought", "type": "AMAZON.SearchQuery" }]
+        },
+        {
+          "name": "StatusIntent",
+          "samples": ["status", "what's the status", "for status", "where are we"]
+        },
+        {
+          "name": "PauseIntent",
+          "samples": ["pause", "stop", "halt", "to pause"]
+        },
+        {
+          "name": "ResumeIntent",
+          "samples": ["resume", "continue", "to resume"]
+        }
+      ]
+    }
+  }
+}

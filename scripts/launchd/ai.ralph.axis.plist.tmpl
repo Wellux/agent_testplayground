@@ -4,17 +4,20 @@
   Template for Ralph meta-chain launchd agents on macOS.
 
   Placeholders (substituted by scripts/install.sh):
-    @@AXIS@@      research | memory | skills | interaction | compress
-    @@HOUR@@      0..23, or -1 for hourly (then StartCalendarInterval omits Hour)
+    @@AXIS@@      research | memory | skills | interaction | compress | heal | evolve | update
+    @@HOUR@@      0..23, or -1 for hourly, or -6 for every-6-hours
     @@MINUTE@@    0..59
     @@PROMPT@@    file under $RALPH/ to feed claude -p
-    @@TIMEOUT@@   seconds for `timeout` outer wrapper (1500 daily, 600 compress)
-    @@MAXITERS@@  inner Ralph max iterations (8 daily, 4 compress)
+    @@TIMEOUT@@   seconds for `timeout` outer wrapper
+    @@MAXITERS@@  inner Ralph max iterations
+    @@WEEKDAY@@   0..6 (0=Sun) for weekly axes; empty for daily/hourly
     @@RALPH@@     absolute path to prompts/ralph-meta-chain
     @@LOG@@       absolute path to log file
 
-  When @@HOUR@@ is -1, install.sh removes the <key>Hour</key>+<integer/> pair
-  to make the job fire every hour at @@MINUTE@@.
+  Note: this template renders a single calendar trigger. install.sh post-
+  processes the rendered plist to (a) drop the <key>Hour</key>+<integer/>
+  pair when @@HOUR@@ is -1 (hourly) or -6 (every 6h), and (b) inject
+  <key>Weekday</key><integer>N</integer> when @@WEEKDAY@@ is non-empty.
 -->
 <plist version="1.0">
 <dict>

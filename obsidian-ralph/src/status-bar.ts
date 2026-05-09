@@ -63,7 +63,10 @@ export class StatusBar {
       ["memory", "mem"],
       ["skills", "skl"],
       ["interaction", "int"],
-      ["compress", "cmp"]
+      ["compress", "cmp"],
+      ["heal", "hal"],
+      ["evolve", "evo"],
+      ["update", "upd"]
     ];
     const parts = axes.map(([axis, short]) => {
       const entry = state?.[axis];

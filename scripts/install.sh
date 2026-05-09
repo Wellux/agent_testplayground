@@ -87,6 +87,12 @@ $TAG_PREFIX interaction
 0 4 * * * timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/03-interaction-optimizer.md)" || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
 $TAG_PREFIX compress
 30 * * * * timeout 10m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/05-compress.md)"            || [ \$((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX heal
+15 */6 * * * timeout 10m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/06-autoheal.md)"          || [ \$((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX evolve
+0 5 * * 0 timeout 30m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/07-autoevolve.md)"           || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+$TAG_PREFIX update
+0 6 * * 1 timeout 25m bash -c 'i=0; until ! claude -p "\$(cat \$RALPH/08-autoupdate.md)"           || [ \$((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
 EOF
 }
 
@@ -131,12 +137,13 @@ install_macos() {
   fi
   mkdir -p "$LA"
 
-  local axes=(research memory skills interaction compress)
-  local hours=(1 2 3 4 -1)            # -1 = hourly
-  local minutes=(0 0 0 0 30)
-  local prompts=(04-research-ingest.md 01-memory-optimizer.md 02-skills-optimizer.md 03-interaction-optimizer.md 05-compress.md)
-  local timeouts=(1500 1500 1500 1500 600)
-  local maxiters=(8 8 8 8 4)
+  local axes=(research memory skills interaction compress heal evolve update)
+  local hours=(1 2 3 4 -1 -6 5 6)     # -1 = hourly; -6 = every 6h (Hour omitted, StartCalendarInterval Hour=6 unused)
+  local minutes=(0 0 0 0 30 15 0 0)
+  local prompts=(04-research-ingest.md 01-memory-optimizer.md 02-skills-optimizer.md 03-interaction-optimizer.md 05-compress.md 06-autoheal.md 07-autoevolve.md 08-autoupdate.md)
+  local timeouts=(1500 1500 1500 1500 600 600 1800 1500)
+  local maxiters=(8 8 8 8 4 4 8 8)
+  local weekdays=("" "" "" "" "" "" "0" "1")  # 0=Sun, 1=Mon; empty = daily/hourly
 
   for i in "${!axes[@]}"; do
     local axis="${axes[$i]}"
@@ -149,9 +156,44 @@ install_macos() {
       -e "s|@@PROMPT@@|${prompts[$i]}|g" \
       -e "s|@@TIMEOUT@@|${timeouts[$i]}|g" \
       -e "s|@@MAXITERS@@|${maxiters[$i]}|g" \
+      -e "s|@@WEEKDAY@@|${weekdays[$i]:-}|g" \
       -e "s|@@RALPH@@|$RALPH|g" \
       -e "s|@@LOG@@|$LOG|g" \
       "$TMPL")"
+
+    # Post-process the rendered plist for non-daily schedules.
+    case "${hours[$i]}" in
+      -1)
+        # Hourly: drop the Hour key+integer pair so it fires every hour at @@MINUTE@@.
+        body="$(printf '%s\n' "$body" | awk '
+          /<key>Hour<\/key>/      { skip=2; next }
+          skip>0                  { skip--; next }
+          { print }')"
+        ;;
+      -6)
+        # Every 6h: replace StartCalendarInterval with StartInterval=21600s.
+        body="$(printf '%s\n' "$body" | awk '
+          /<key>StartCalendarInterval<\/key>/ { in_block=1; print "  <key>StartInterval</key>"; print "  <integer>21600</integer>"; next }
+          /<\/dict>/ && in_block==1 { in_block=0; next }
+          in_block==1 { next }
+          { print }')"
+        ;;
+    esac
+
+    # If weekly, inject <key>Weekday</key><integer>N</integer> after Minute.
+    if [[ -n "${weekdays[$i]}" ]]; then
+      local wd="${weekdays[$i]}"
+      body="$(printf '%s\n' "$body" | awk -v wd="$wd" '
+        /<key>Minute<\/key>/ { print; in_min=1; next }
+        in_min==1 && /<integer>/ {
+          print
+          print "    <key>Weekday</key>"
+          print "    <integer>" wd "</integer>"
+          in_min=0
+          next
+        }
+        { print }')"
+    fi
 
     if [[ $DRY_RUN -eq 1 ]]; then
       echo "── DRY RUN — would write $plist ──"

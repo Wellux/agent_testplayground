@@ -1,0 +1,48 @@
+{
+  "_comment": "Apple Shortcut spec — text representation. Import via the Shortcuts app on iPhone/iPad/Watch. Paste these actions into a new Shortcut named 'Tell Ralph'. Replace TAILSCALE_HOST with your Mac mini's Tailscale name (e.g. mac-mini.tailNNNNN.ts.net).",
+  "name": "Tell Ralph",
+  "description": "Dictate a thought; Ralph drops it in 00-Inbox/ for tomorrow's memory pass.",
+  "icon": "🌀",
+  "color": "indigo",
+  "actions": [
+    {
+      "type": "is.workflow.actions.dictatetext",
+      "params": { "WFDictateTextLanguage": "en-US", "WFDictateTextStopListening": "AfterShortPause" },
+      "output_var": "DictatedText"
+    },
+    {
+      "type": "is.workflow.actions.url",
+      "params": { "WFURL": "http://TAILSCALE_HOST:7117/ralph/voice" },
+      "output_var": "Endpoint"
+    },
+    {
+      "type": "is.workflow.actions.downloadurl",
+      "params": {
+        "WFHTTPMethod": "POST",
+        "WFFormValues": {
+          "Value": {
+            "Type": "Form",
+            "FormValues": [
+              { "Key": "text",   "Value": { "Type": "Variable", "VariableName": "DictatedText" } },
+              { "Key": "source", "Value": { "Type": "Text",     "Value": "ios-shortcut" } }
+            ]
+          }
+        }
+      },
+      "output_var": "Response"
+    },
+    {
+      "type": "is.workflow.actions.notification",
+      "params": { "WFNotificationActionTitle": "Ralph", "WFNotificationActionBody": { "Type": "Variable", "VariableName": "Response" } }
+    }
+  ],
+  "_install": [
+    "1. Open the Shortcuts app on your iPhone/iPad.",
+    "2. Tap '+' to create a new Shortcut.",
+    "3. Add the actions in order: Dictate Text → URL → Get Contents of URL (POST, Form, with `text` + `source` fields wired to Dictated Text) → Show Notification.",
+    "4. Replace TAILSCALE_HOST with your Mac mini's Tailscale name.",
+    "5. Name the shortcut 'Tell Ralph'. Add it to your Watch face for one-tap dictation.",
+    "6. Optional: 'Hey Siri, Tell Ralph' becomes the trigger on iPhone + AirPods.",
+    "7. To capture audio instead of dictation: replace 'Dictate Text' with 'Record Audio' and use the `audio` form field instead of `text`. Requires whisper-cli on the Mac mini."
+  ]
+}

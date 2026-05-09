@@ -31,6 +31,9 @@ budgets:
   interaction: { max_user_profile_updates: 1, max_prompt_rewrites: 5, max_ab_experiments: 3 }
   research:    { max_repos: 30, max_inbox_files: 1 }
   compress:    { max_compressions: 5, max_weekly_rollups: 1, token_threshold: 4000 }
+  heal:        { max_fixes: 3, max_escalations: 5 }
+  evolve:      { max_proposals: 5, max_population_spawn: 3 }
+  update:      { max_release_feeds: 12, max_bump_proposals: 5, max_news_items: 10 }
 
 trailing_window_days: 7
 dry_run: false

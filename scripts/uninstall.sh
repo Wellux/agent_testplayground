@@ -59,7 +59,7 @@ uninstall_linux() {
 
 uninstall_macos() {
   local LA="$HOME/Library/LaunchAgents"
-  local axes=(research memory skills interaction compress)
+  local axes=(research memory skills interaction compress heal evolve update)
   local found=0
   for axis in "${axes[@]}"; do
     local plist="$LA/ai.ralph.$axis.plist"

@@ -1,0 +1,40 @@
+{
+  "_comment": "Apple Shortcut — query /ralph/status and surface a glanceable summary. Suitable for Watch complication.",
+  "name": "Ralph Status",
+  "icon": "📊",
+  "color": "teal",
+  "actions": [
+    {
+      "type": "is.workflow.actions.url",
+      "params": { "WFURL": "http://TAILSCALE_HOST:7117/ralph/status" },
+      "output_var": "Endpoint"
+    },
+    {
+      "type": "is.workflow.actions.downloadurl",
+      "params": { "WFHTTPMethod": "GET" },
+      "output_var": "Response"
+    },
+    {
+      "type": "is.workflow.actions.getvalueforkey",
+      "params": { "WFDictionaryKey": "stopped" },
+      "input_var": "Response",
+      "output_var": "Stopped"
+    },
+    {
+      "type": "is.workflow.actions.choosefrommenu",
+      "params": {
+        "WFMenuPrompt": "Ralph",
+        "WFMenuItems": [
+          { "Value": "Pause",  "Action": "POST /ralph/stop" },
+          { "Value": "Resume", "Action": "POST /ralph/resume" },
+          { "Value": "Run memory now", "Action": "POST /ralph/run {axis: memory}" },
+          { "Value": "Run heal now",   "Action": "POST /ralph/run {axis: heal}" }
+        ]
+      }
+    }
+  ],
+  "_install": [
+    "Same Shortcut-import flow as Tell Ralph.",
+    "The 'Choose from Menu' step lets you tap Pause / Resume / Run-axis from the Watch."
+  ]
+}

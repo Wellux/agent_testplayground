@@ -24,7 +24,10 @@ export default class RalphPlugin extends Plugin {
       { id: "memory",      name: "memory",          prompt: "01-memory-optimizer.md" },
       { id: "skills",      name: "skills",          prompt: "02-skills-optimizer.md" },
       { id: "interaction", name: "interaction",     prompt: "03-interaction-optimizer.md" },
-      { id: "compress",    name: "compress",        prompt: "05-compress.md" }
+      { id: "compress",    name: "compress",        prompt: "05-compress.md" },
+      { id: "heal",        name: "autoheal",        prompt: "06-autoheal.md" },
+      { id: "evolve",      name: "autoevolve",      prompt: "07-autoevolve.md" },
+      { id: "update",      name: "autoupdate",      prompt: "08-autoupdate.md" }
     ];
 
     for (const axis of axes) {

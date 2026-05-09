@@ -8,13 +8,16 @@ and rewrites the prompts/skills/playbooks the next run will execute.
 Three drafts live in this folder. Run them once a day, in order, against the
 same vault.
 
-| Order | Cron (UTC)   | Prompt                          | Optimizes                               |
-| ----- | ------------ | ------------------------------- | --------------------------------------- |
-| 0     | `0 1 * * *`  | `04-research-ingest.md`         | GitHub-trending feeds → inbox           |
-| 1     | `0 2 * * *`  | `01-memory-optimizer.md`        | Long-term memory / notes / MOCs         |
-| 2     | `0 3 * * *`  | `02-skills-optimizer.md`        | Reusable skills, snippets, playbooks    |
-| 3     | `0 4 * * *`  | `03-interaction-optimizer.md`   | Tone, prompt patterns, user preferences |
-| ★     | `30 * * * *` | `05-compress.md`                | Hourly context compression              |
+| Order | Cron (UTC)     | Prompt                          | Optimizes                                            |
+| ----- | -------------- | ------------------------------- | ---------------------------------------------------- |
+| 0     | `0 1 * * *`    | `04-research-ingest.md`         | GitHub-trending feeds → inbox                        |
+| 1     | `0 2 * * *`    | `01-memory-optimizer.md`        | Long-term memory / notes / MOCs                      |
+| 2     | `0 3 * * *`    | `02-skills-optimizer.md`        | Reusable skills, snippets, playbooks                 |
+| 3     | `0 4 * * *`    | `03-interaction-optimizer.md`   | Tone, prompt patterns, user preferences              |
+| ★     | `30 * * * *`   | `05-compress.md`                | Hourly context compression                           |
+| 6     | `15 */6 * * *` | `06-autoheal.md`                | Supervisor heartbeat / fix-or-escalate (Nate Herk)   |
+| 7     | `0 5 * * 0`    | `07-autoevolve.md`              | Weekly fitness function (Alex Finn)                  |
+| 8     | `0 6 * * 1`    | `08-autoupdate.md`              | Weekly tool/news scan (Matt Wolfe FutureTools)       |
 
 The order matters: research feeds memory; skills are derived from settled
 memory; interaction heuristics are derived from skills + memory. The

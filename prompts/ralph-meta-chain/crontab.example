@@ -43,3 +43,12 @@ LOG=/var/log/ralph.log
 
 # ★) Compress — hourly at :30; capped at 10 minutes; budget-bounded
 30 * * * * timeout 10m bash -c 'i=0; until ! claude -p "$(cat $RALPH/05-compress.md)"            || [ $((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+
+# 6) Autoheal — every 6 hours (Nate Herk supervisor pattern)
+15 */6 * * * timeout 10m bash -c 'i=0; until ! claude -p "$(cat $RALPH/06-autoheal.md)"          || [ $((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+
+# 7) Autoevolve — weekly Sunday 05:00 UTC (Alex Finn ruthless iteration)
+0 5 * * 0 timeout 30m bash -c 'i=0; until ! claude -p "$(cat $RALPH/07-autoevolve.md)"           || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 8) Autoupdate — weekly Monday 06:00 UTC (Matt Wolfe FutureTools weekly scan)
+0 6 * * 1 timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/08-autoupdate.md)"           || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1

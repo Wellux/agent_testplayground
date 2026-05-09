@@ -1,0 +1,32 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "ralph",
+  "title": "Ralph",
+  "description": "Trigger Ralph meta-chain passes from Raycast.",
+  "icon": "command-icon.png",
+  "author": "ralph-meta-chain",
+  "categories": ["Productivity"],
+  "license": "MIT",
+  "preferences": [
+    {
+      "name": "voiceUrl",
+      "title": "Voice-server URL",
+      "description": "Base URL of your Mac mini voice-server (Tailscale).",
+      "type": "textfield",
+      "required": true,
+      "default": "http://mac-mini.tailNNNNN.ts.net:7117"
+    }
+  ],
+  "commands": [
+    { "name": "capture", "title": "Capture Thought", "description": "Drop a quick text capture into 00-Inbox/.", "mode": "view" },
+    { "name": "status",  "title": "Ralph Status",    "description": "Show last-run per axis + STOP flag.",      "mode": "view" },
+    { "name": "run",     "title": "Run Axis",         "description": "Pick an axis and run its Ralph loop.",     "mode": "view" }
+  ],
+  "scripts": { "build": "tsc --noEmit && esbuild src/*.tsx --bundle --platform=node --outdir=dist --external:react --external:@raycast/api" },
+  "devDependencies": {
+    "@raycast/api": "^1.80.0",
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.21.0",
+    "typescript": "^5.4.0"
+  }
+}
