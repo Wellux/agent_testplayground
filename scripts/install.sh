@@ -67,6 +67,32 @@ if ! command -v claude >/dev/null 2>&1; then
   echo "[install] 'claude' (Claude Code CLI) not on PATH" >&2; exit 67
 fi
 
+# ── Seed first-day vault content ────────────────────────────────────────────
+seed_vault() {
+  local seed_src="$RALPH/seed"
+  if [[ ! -d "$seed_src" ]]; then
+    echo "[install] no seed/ directory; skipping seed step"
+    return
+  fi
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "── DRY RUN — would seed (cp -n) from $seed_src into $VAULT ──"
+    (cd "$seed_src" && find . -type f | sed "s|^\\./|  $VAULT/|")
+    return
+  fi
+  # cp -n = never overwrite. Honors existing user content.
+  (cd "$seed_src" && find . -type f -exec sh -c '
+    src="$1"; rel="${src#./}"; dst="'"$VAULT"'/$rel"
+    mkdir -p "$(dirname "$dst")"
+    if [ -f "$dst" ]; then
+      echo "[install] keep existing $dst"
+    else
+      cp "$src" "$dst" && echo "[install] seeded $dst"
+    fi
+  ' _ {} \;)
+}
+
+seed_vault
+
 OS="$(uname -s)"
 LOG="${RALPH_LOG:-$HOME/.ralph.log}"
 TS_BAK="$(date -u +%Y%m%dT%H%M%SZ)"

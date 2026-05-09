@@ -129,6 +129,108 @@ class MemoryBackends(unittest.TestCase):
             select_backend("cognee", vault=pathlib.Path("/tmp"), model="x")
 
 
+class ReflectAppend(unittest.TestCase):
+    def test_appends_to_empty_list(self) -> None:
+        from harness.reflect import _append_reflection
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / "cand.md"
+            p.write_text("---\nname: x\nreflections: []\n---\n\nbody\n")
+            self.assertTrue(_append_reflection(p, "[2026-05-09] terse rubric ok"))
+            text = p.read_text()
+            self.assertIn('reflections:\n  - "[2026-05-09] terse rubric ok"', text)
+
+    def test_appends_when_no_field_exists(self) -> None:
+        from harness.reflect import _append_reflection
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / "cand.md"
+            p.write_text("---\nname: x\n---\n\nbody\n")
+            self.assertTrue(_append_reflection(p, "[2026-05-09] new"))
+            text = p.read_text()
+            self.assertIn("reflections:", text)
+            self.assertIn('- "[2026-05-09] new"', text)
+            self.assertIn("\nbody\n", text)
+
+    def test_skips_when_no_frontmatter(self) -> None:
+        from harness.reflect import _append_reflection
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / "no-fm.md"
+            p.write_text("# just a body, no frontmatter\n")
+            self.assertFalse(_append_reflection(p, "x"))
+
+
+class HeuristicVerdict(unittest.TestCase):
+    def test_candidate_wins_when_better_rubric_and_fewer_tokens(self) -> None:
+        from harness.reflect import _heuristic_verdict
+        v = _heuristic_verdict(
+            inc={"rubric": 3.5, "tokens": 600, "banned": 0},
+            can={"rubric": 4.0, "tokens": 500, "banned": 0},
+        )
+        self.assertEqual(v, "candidate-wins")
+
+    def test_incumbent_wins_when_higher_rubric(self) -> None:
+        from harness.reflect import _heuristic_verdict
+        v = _heuristic_verdict(
+            inc={"rubric": 4.5, "tokens": 600, "banned": 0},
+            can={"rubric": 3.0, "tokens": 500, "banned": 0},
+        )
+        self.assertEqual(v, "incumbent-wins")
+
+
+class TracesView(unittest.TestCase):
+    def test_returns_1_on_empty_file(self) -> None:
+        import io, contextlib
+        from harness import traces as traces_mod
+        with tempfile.TemporaryDirectory() as d:
+            vault = pathlib.Path(d) / "vault"
+            (vault / "90-Meta").mkdir(parents=True)
+            os.environ["VAULT"] = str(vault)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = traces_mod.run(tail=10, axis=None, vault_override=str(vault),
+                                    config_path=str(REPO / "prompts" / "ralph-meta-chain" / "config.yml"))
+            self.assertEqual(rc, 1)
+            self.assertIn("(no rows)", buf.getvalue())
+
+    def test_summarizes_by_axis(self) -> None:
+        import io, contextlib
+        from harness import traces as traces_mod
+        with tempfile.TemporaryDirectory() as d:
+            vault = pathlib.Path(d) / "vault"
+            (vault / "90-Meta").mkdir(parents=True)
+            (vault / "90-Meta" / "metrics.ndjson").write_text(
+                '{"axis":"memory","verdict":"validated"}\n'
+                '{"axis":"memory","verdict":"refuted"}\n'
+                '{"axis":"skills","verdict":"validated"}\n',
+                encoding="utf8",
+            )
+            os.environ["VAULT"] = str(vault)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = traces_mod.run(tail=100, axis=None, vault_override=str(vault),
+                                    config_path=str(REPO / "prompts" / "ralph-meta-chain" / "config.yml"))
+            out = buf.getvalue()
+            self.assertEqual(rc, 0)
+            self.assertIn("memory: 2", out)
+            self.assertIn("skills: 1", out)
+
+
+class SeedTreeShipped(unittest.TestCase):
+    """Verify the seed/ tree exists and contains the canonical first-day files."""
+
+    def test_seed_files_present(self) -> None:
+        seed = REPO / "prompts" / "ralph-meta-chain" / "seed"
+        self.assertTrue(seed.is_dir())
+        for rel in (
+            "CLAUDE.md",
+            "40-Skills/recall.md",
+            "40-Skills/pr-from-branch.md",
+            "50-Prompts/code-review.md",
+            "50-Prompts/daily-summary.md",
+            "60-Interactions/user-profile.md",
+        ):
+            self.assertTrue((seed / rel).is_file(), f"missing seed file: {rel}")
+
+
 class CreatorRender(unittest.TestCase):
     def test_render_creators_groups_by_handle(self) -> None:
         from harness.ingest import _render_creators

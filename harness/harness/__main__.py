@@ -10,6 +10,8 @@ from . import ab as ab_mod
 from . import compress as compress_mod
 from . import embeddings as embeddings_mod
 from . import ingest as ingest_mod
+from . import reflect as reflect_mod
+from . import traces as traces_mod
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -49,6 +51,15 @@ def _build_parser() -> argparse.ArgumentParser:
     g2.add_argument("--older-than", help="time window (e.g. '7d')")
     g2.add_argument("--weekly", action="store_true", help="weekly rollup mode")
     p_c.add_argument("--iso-week", help="ISO week (YYYY-Www) for --weekly")
+
+    p_r = sub.add_parser("reflect", help="Append a Reflexion lesson to a candidate prompt")
+    p_r.add_argument("--candidate", required=True, help="vault-relative path to .candidate-N.md")
+    p_r.add_argument("--verdict", default=None, help="optional pre-computed verdict label")
+    p_r.add_argument("--judge-model", default=None, help="override judge model")
+
+    p_t = sub.add_parser("traces", help="Tail / summarize 90-Meta/metrics.ndjson")
+    p_t.add_argument("--tail", type=int, default=200)
+    p_t.add_argument("--axis", default=None, help="filter to one axis")
 
     return parser
 
@@ -109,6 +120,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             older_than=args.older_than,
             weekly=args.weekly,
             iso_week=args.iso_week,
+            vault_override=args.vault,
+            config_path=args.config,
+        )
+    if args.cmd == "reflect":
+        return reflect_mod.run(
+            candidate=args.candidate,
+            verdict=args.verdict,
+            judge_model=args.judge_model,
+            vault_override=args.vault,
+            config_path=args.config,
+        )
+    if args.cmd == "traces":
+        return traces_mod.run(
+            tail=args.tail,
+            axis=args.axis,
             vault_override=args.vault,
             config_path=args.config,
         )
