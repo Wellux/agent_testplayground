@@ -6,12 +6,26 @@ counterpart of `$VAULT/CLAUDE.md` (the vault's own schema).
 
 ## What lives where
 
-- `prompts/ralph-meta-chain/` — five Ralph prompts + config + crontab.
-- `scripts/` — idempotent install/uninstall for cron (Linux) / launchd (macOS).
+- `prompts/ralph-meta-chain/` — eight Ralph prompts + config + crontab +
+  the seed/ vault tree + the Round 1 design foundation:
+    - `research/` — research notes, synthesis, watchlist, rubric.
+    - `docs/` — 18 canonical design docs (architecture, memory model,
+      cron jobs, governance, etc.).
+- `scripts/` — idempotent install/uninstall for cron (Linux) / launchd
+  (macOS). **Phase 1-6 reference implementation.**
 - `obsidian-ralph/` — TypeScript Obsidian plugin (UI for the chain).
+  **Phase 1-6 reference implementation; greenfield target is
+  `prompts/ralph-meta-chain/obsidian-plugin/` per
+  `docs/OBSIDIAN_PLUGIN.md`.**
 - `harness/` — Python CLI: A/B (`promptfoo`-shaped fixtures), embeddings
-  (`Ollama` → `sqlite-vec`), ingest, compress.
-- `docs/` — design docs (Phase G voice/multi-device sketch only).
+  (`Ollama` → `sqlite-vec`), ingest, compress, reflect, traces, self-test.
+  **Phase 1-6 reference implementation.**
+- `voice-server/` — FastAPI dispatcher (Phase 3). **Reference only per
+  master spec; voice/multi-device runtime stays gated.**
+- `docs/voice-multidevice-design.md` — Phase G architecture sketch.
+
+The master spec is canonical going forward. See
+`prompts/ralph-meta-chain/docs/ROADMAP.md` for the rebuild plan.
 
 ## Operating rules (copied from vault `CLAUDE.md`)
 

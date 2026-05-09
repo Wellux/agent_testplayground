@@ -53,10 +53,33 @@ This repo also ships:
 - `obsidian-ralph/` — TypeScript Obsidian plugin: command palette, status
   bar, log + metrics side panes. Built with esbuild.
 - `harness/` — Python CLI with subcommands `ab`, `embed`, `query`, `ingest`,
-  `compress`. Fixture format follows `promptfoo`. Storage uses `sqlite-vec`
-  + FTS5 (à la `obra/knowledge-graph`). Embeddings via local Ollama.
+  `compress`, `reflect`, `traces`, `self-test`. Fixture format follows
+  `promptfoo`. Storage uses `sqlite-vec` + FTS5 (à la `obra/knowledge-graph`).
+  Embeddings via local Ollama.
 - `docs/voice-multidevice-design.md` — Phase G architecture sketch (no code
   in this PR): Apple Shortcuts + Watch + AirPods + Mac mini server + Alexa.
+
+## Round 1 — research-first greenfield design (canonical going forward)
+
+Round 1 of the master spec lays the design foundation that future
+greenfield rounds (Round 2-N) will implement against. The above
+Phase 1-6 directories (`harness/`, `voice-server/`, `obsidian-ralph/`,
+`scripts/`, `docs/voice-multidevice-design.md`) become the **Phase 1-6
+reference implementation** — they inform but do not bind the rebuild.
+
+Round 1 deliverables live under:
+
+- `prompts/ralph-meta-chain/research/` — `RESEARCH_NOTES.md`,
+  `RESEARCH_SYNTHESIS.md`, `github-watchlist.md`, `trend-scout.md`,
+  `source-quality-rubric.md`.
+- `prompts/ralph-meta-chain/docs/` — 18 design docs covering
+  architecture, memory model, context lifecycle, cron jobs, Claude Code
+  integration, Obsidian plugin, A/B harness, autoheal, autoupdate,
+  provider-neutral architecture, business entity scope, voice/multi-device
+  future scope, security/privacy, governance, approval gates, repo
+  migration, roadmap, operations manual.
+
+Start with `docs/ROADMAP.md` for what comes next.
 
 If a folder is missing, the prompt creates it on first run.
 
