@@ -95,7 +95,10 @@ if [[ ! -d "$VAULT" ]]; then
   echo "          create it (e.g. mkdir -p \"$VAULT\") and rerun." >&2
   exit 66
 fi
-if ! command -v claude >/dev/null 2>&1; then
+# claude check — only required for actual install. --dry-run describes
+# what WOULD happen, so it doesn't depend on the runtime tool being
+# present (otherwise CI / pre-install validation breaks unnecessarily).
+if [[ $DRY_RUN -eq 0 ]] && ! command -v claude >/dev/null 2>&1; then
   echo "[install] 'claude' (Claude Code CLI) not on PATH" >&2; exit 67
 fi
 
