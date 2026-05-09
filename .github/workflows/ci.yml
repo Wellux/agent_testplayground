@@ -37,7 +37,7 @@ jobs:
     name: privacy guard
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: no user-identifier strings in tracked files
         run: |
           set -e
@@ -51,7 +51,7 @@ jobs:
     name: shell scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: bash -n every shell script in the repo
         run: |
           set -e
@@ -68,7 +68,7 @@ jobs:
     name: validators (Round 5 ralph_*.sh + Round 4 migration)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: provider-interface conformance (13 fields per adapter)
         run: prompts/ralph-meta-chain/scripts/ralph_provider_validate.sh
       - name: business-entity ledger schema
@@ -115,7 +115,7 @@ jobs:
       run:
         working-directory: prompts/ralph-meta-chain/scripts/harness
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -139,7 +139,7 @@ jobs:
       run:
         working-directory: prompts/ralph-meta-chain/voice-server
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -162,7 +162,7 @@ jobs:
       run:
         working-directory: prompts/ralph-meta-chain/obsidian-plugin
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -181,7 +181,7 @@ jobs:
     name: bats stubs (Round 5 + Round 4 + Round 7)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: install bats-core
         run: |
           set -e
@@ -205,7 +205,7 @@ jobs:
     name: ralph-mcp-server (python stdio)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
