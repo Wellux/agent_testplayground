@@ -6,26 +6,44 @@ counterpart of `$VAULT/CLAUDE.md` (the vault's own schema).
 
 ## What lives where
 
-- `prompts/ralph-meta-chain/` — eight Ralph prompts + config + crontab +
-  the seed/ vault tree + the Round 1 design foundation:
-    - `research/` — research notes, synthesis, watchlist, rubric.
-    - `docs/` — 18 canonical design docs (architecture, memory model,
-      cron jobs, governance, etc.).
-- `scripts/` — idempotent install/uninstall for cron (Linux) / launchd
-  (macOS). **Phase 1-6 reference implementation.**
-- `obsidian-ralph/` — TypeScript Obsidian plugin (UI for the chain).
-  **Phase 1-6 reference implementation; greenfield target is
-  `prompts/ralph-meta-chain/obsidian-plugin/` per
-  `docs/OBSIDIAN_PLUGIN.md`.**
-- `harness/` — Python CLI: A/B (`promptfoo`-shaped fixtures), embeddings
-  (`Ollama` → `sqlite-vec`), ingest, compress, reflect, traces, self-test.
-  **Phase 1-6 reference implementation.**
-- `voice-server/` — FastAPI dispatcher (Phase 3). **Reference only per
-  master spec; voice/multi-device runtime stays gated.**
-- `docs/voice-multidevice-design.md` — Phase G architecture sketch.
+Round 8 (2026-05-09) made `prompts/ralph-meta-chain/` the canonical
+master-spec layout. Phase 1-6 reference paths are archived under
+`prompts/ralph-meta-chain/migration/_archive/_pre-migrated/`; the old
+root-level paths (`harness/`, `voice-server/`, `obsidian-ralph/`,
+`scripts/`) now contain breadcrumb `README.md` files only.
 
-The master spec is canonical going forward. See
-`prompts/ralph-meta-chain/docs/ROADMAP.md` for the rebuild plan.
+- `prompts/ralph-meta-chain/` — canonical layout (everything below):
+    - `0[1-8]-*.md` — eight Ralph prompts (memory / skills / interaction
+      / research-ingest / compress / autoheal / autoevolve / autoupdate).
+    - `config.example.yml`, `config.yml` — chain configuration.
+    - `crontab.example` — UTC schedule template.
+    - `research/` — research notes, synthesis, watchlist, rubric.
+    - `docs/` — 18+ canonical design docs (architecture, memory model,
+      cron jobs, governance, indexing, Round 8 runbook, etc.).
+    - `scripts/harness/` — Python CLI: A/B (`promptfoo`-shaped
+      fixtures), embeddings (`Ollama` → `sqlite-vec`), ingest, compress,
+      reflect, traces, self-test, migration.
+    - `scripts/ralph_*.sh` — Bash shims wrapping the harness CLI +
+      validators (`ralph_validate_frontmatter.sh`,
+      `ralph_check_links.sh`, `ralph_provider_validate.sh`,
+      `ralph_business_ledger_check.sh`).
+    - `scripts/lib/` — shared shell helpers.
+    - `voice-server/` — FastAPI dispatcher (Phase 3). Voice
+      multi-device runtime stays gated per
+      `docs/VOICE_MULTI_DEVICE_FUTURE_SCOPE.md`.
+    - `obsidian-plugin/` — TypeScript Obsidian plugin (UI for the
+      chain).
+    - `install/install_cron.sh` — idempotent install/uninstall for
+      cron (Linux) / launchd (macOS).
+    - `commands/`, `skills/`, `hooks/` — Claude-Code slash commands,
+      specialist skills, and pre/post-tool hooks per master spec.
+    - `indexes/`, `benchmarks/`, `experiments/` — Round 7 catalogs +
+      scorecards + fixture/output/report buckets.
+    - `business-entity/`, `migration/`, `providers/`,
+      `vault-template/` — Round 3-4 scaffolds.
+
+See `docs/ROADMAP.md` for the round-by-round shipping log and
+`docs/OPERATIONS_MANUAL.md` for daily/weekly playbook.
 
 ## Operating rules (copied from vault `CLAUDE.md`)
 

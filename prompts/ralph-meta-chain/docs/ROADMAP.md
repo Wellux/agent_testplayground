@@ -153,9 +153,20 @@ Output:
   reports.
 - Updated bats coverage.
 
-### Round 8 — Phase 1-6 retirement
+### Round 8 — Phase 1-6 retirement ✓
 
-**Status:** planned, last.
+**Status:** shipped on 2026-05-09 across commits `b8a6e8c` (Stage A pre-
+migrated retarget + RUNBOOK), `09e036e` (Stage B CI backup + audit-log
++ dry-run apply), `2d2509a` (Stage C apply: 65 git mv, 6 gates verified,
+CI workflow rewritten via STAGE_C_CI_WORKFLOW.yml), `f34c8c3` (post-apply
+P1 path-drift fixes for harness `__init__.py` + `install_cron.sh`),
+`ac57b6b` (`install_cron.sh --dry-run` no longer requires claude on PATH).
+
+Result: master-spec target architecture is the canonical layout. Phase
+1-6 reference paths (`harness/`, `voice-server/`, `obsidian-ralph/`,
+`scripts/install.sh`, `docs/voice-multidevice-design.md`, `CHANGELOG.md`)
+are either at master-spec target paths or archived under
+`prompts/ralph-meta-chain/migration/_archive/_pre-migrated/`.
 
 Output:
 - `harness migration apply --confirmed` (the formal moment of retirement).

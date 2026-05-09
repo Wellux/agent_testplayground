@@ -9,6 +9,10 @@ procedures. Pairs with `CRON_JOBS.md` (schedule reference) and
 
 ## Quick start
 
+Round 8 (2026-05-09) retired the Phase 1-6 root paths via `git mv`.
+Master-spec target paths under `prompts/ralph-meta-chain/` are
+canonical now — Quick Start uses them.
+
 ```bash
 # 1. Clone + configure
 git clone https://github.com/Wellux/agent_testplayground.git
@@ -18,23 +22,34 @@ cp prompts/ralph-meta-chain/config.example.yml \
 $EDITOR prompts/ralph-meta-chain/config.yml   # set vault_path
 
 # 2. Build the Obsidian plugin (optional)
-cd obsidian-ralph && npm install && npm run build && cd ..
-ln -s "$PWD/obsidian-ralph" "$VAULT/.obsidian/plugins/ralph-meta-chain"
+cd prompts/ralph-meta-chain/obsidian-plugin && npm install && npm run build
+ln -s "$PWD" "$VAULT/.obsidian/plugins/ralph-meta-chain"
+cd -
 
 # 3. Install the Python harness
-cd harness && uv sync && cp .env.example .env && cd ..
-$EDITOR harness/.env                          # add ANTHROPIC_API_KEY
+cd prompts/ralph-meta-chain/scripts/harness && uv sync \
+   && cp .env.example .env
+$EDITOR prompts/ralph-meta-chain/scripts/harness/.env   # ANTHROPIC_API_KEY
+cd -
 
 # 4. Pull the local embedding model
 ollama pull nomic-embed-text
+# Optional: bootstrap the full vault index in one shot
+./prompts/ralph-meta-chain/scripts/ralph_bootstrap_embed.sh
 
 # 5. Preview cron entries; install
-./scripts/install.sh --dry-run
-./scripts/install.sh
+./prompts/ralph-meta-chain/install/install_cron.sh --dry-run
+./prompts/ralph-meta-chain/install/install_cron.sh
 
 # 6. Confirm
 tail -f ~/.ralph.log
 ```
+
+Phase 1-6 reference paths (`harness/`, `voice-server/`,
+`obsidian-ralph/`, `scripts/`) are archived in Round 8 under
+`prompts/ralph-meta-chain/migration/_archive/_pre-migrated/`. The
+breadcrumb `README.md` files at the legacy roots point at the
+master-spec targets. See `INDEXING.md` for the embedding bootstrap.
 
 ## Daily checks (5 minutes)
 
@@ -130,9 +145,10 @@ curl -X POST http://localhost:7117/ralph/run \
 
 ### "Self-test fails on plugin"
 
-- Most likely `obsidian-ralph/node_modules/` missing.
-  `cd obsidian-ralph && npm ci`.
-- TypeScript errors: `cd obsidian-ralph && npx tsc --noEmit`.
+- Most likely the plugin's `node_modules/` is missing.
+  `cd prompts/ralph-meta-chain/obsidian-plugin && npm ci`.
+- TypeScript errors:
+  `cd prompts/ralph-meta-chain/obsidian-plugin && npx tsc --noEmit`.
 
 ### "harness ab returns rc=64"
 
@@ -142,8 +158,11 @@ curl -X POST http://localhost:7117/ralph/run \
 ### "Cron drift"
 
 - `crontab -l | grep '# RALPH-managed:'` should show 8 lines.
-- Missing? Re-run `./scripts/install.sh`.
-- Multiple? Run `./scripts/uninstall.sh` then reinstall.
+- Missing? Re-run
+  `./prompts/ralph-meta-chain/install/install_cron.sh`.
+- Multiple? Run
+  `./prompts/ralph-meta-chain/install/install_cron.sh --uninstall`
+  then reinstall.
 
 ### "Voice-server won't start"
 
@@ -157,8 +176,10 @@ In order of escalation:
 
 1. **STOP file** — `touch $VAULT/90-Meta/STOP` halts every cron at next
    tick. Reversible: `rm`.
-2. **Uninstall cron** — `./scripts/uninstall.sh`. Removes only
-   `# RALPH-managed:` entries. Reversible: re-run install.sh.
+2. **Uninstall cron** —
+   `./prompts/ralph-meta-chain/install/install_cron.sh --uninstall`.
+   Removes only `# RALPH-managed:` entries. Reversible: re-run
+   `install_cron.sh`.
 3. **Disable plugin** — Obsidian *Settings → Community plugins → Ralph
    Meta Chain → toggle off*. Reversible: toggle on.
 4. **Disable voice-server** — `launchctl unload
@@ -172,6 +193,12 @@ In order of escalation:
 8. **Restore vault from backup** — assumes user has Obsidian Sync /
    git / iCloud / Time Machine backup. Ralph never erases vault content,
    so this shouldn't be needed.
+9. **Roll back Round 8 migration** — last resort. From the repo,
+   `./prompts/ralph-meta-chain/migration/scripts/ralph_rollback_migration.sh`
+   reads `migration/rollback-plan.md` (mirror of all 65 moves). Returns
+   the tree to the pre-Stage-C layout. Pre-migrated archives stay in
+   place. CI workflow is restored from the most recent
+   `ci-backup-*.yml`.
 
 ## Logs to watch
 
@@ -198,8 +225,8 @@ The chain doesn't manage backups — the user does. Recommendations:
 
 ## Safety notes
 
-- **Never run `./scripts/install.sh --apply` from CI.** It modifies the
-  user's host crontab. CI only runs `bash -n` syntax checks.
+- **Never run `install_cron.sh` from CI.** It modifies the user's host
+  crontab. CI only runs `bash -n` syntax checks.
 - **Review every CRITICAL proposal in `30-Notes/<id>-*.md` carefully.**
   Apply only after reading the rollback plan.
 - **The chain runs on cron, not on event triggers.** A captured thought
@@ -213,8 +240,16 @@ The chain doesn't manage backups — the user does. Recommendations:
 - `APPROVAL_GATES.md` — risk classes.
 - `SECURITY_PRIVACY.md` — emergency stop.
 - `ROADMAP.md` — what's coming.
-- Phase 1-6 reference: `harness/`, `voice-server/`, `obsidian-ralph/`,
-  `scripts/`, `prompts/ralph-meta-chain/0[1-8]-*.md`.
+- `INDEXING.md` — embedding bootstrap (Ollama + sqlite-vec).
+- `ROUND_8_RUNBOOK.md` — Round 8 mechanics + rollback contract.
+- Master-spec canonical paths:
+  `prompts/ralph-meta-chain/scripts/harness/`,
+  `prompts/ralph-meta-chain/voice-server/`,
+  `prompts/ralph-meta-chain/obsidian-plugin/`,
+  `prompts/ralph-meta-chain/install/install_cron.sh`,
+  `prompts/ralph-meta-chain/0[1-8]-*.md`.
+- Phase 1-6 reference (archived in Round 8) under
+  `prompts/ralph-meta-chain/migration/_archive/_pre-migrated/`.
 
 ## Next actions
 
