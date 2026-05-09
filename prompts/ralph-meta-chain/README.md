@@ -89,6 +89,33 @@ If a folder is missing, the prompt creates it on first run.
 the prompt file into a non-interactive Claude run with the vault path exported
 as `$VAULT`. Adjust the binary, model, and working directory for your setup.
 
+The canonical installer (`install/install_cron.sh`) writes the schedule for
+you on Linux (cron) or macOS (launchd) and seeds the vault from `seed/` +
+`vault-template/`.
+
+## Wiring as a Claude Code surface (interactive)
+
+Cron is *background*. To make the chain available *interactively* from inside
+Claude Code (slash commands, subagents, hooks, MCP tools), run:
+
+```bash
+prompts/ralph-meta-chain/install/install_claude_code.sh
+```
+
+This wires:
+
+- **11 slash commands** (`/ralph-cron` master + per-axis dashboards)
+- **8 axis subagents** in `agents/` (delegated specialists)
+- **8 specialist skills** in `skills/`
+- **5 lifecycle hooks** (SessionStart, PreToolUse, PostToolUse, Stop, Notification)
+- **Permissions allowlist** + deny-list, set-union'd into your settings.json
+- **`ralph` MCP server** exposing 4 read-only tools (`ralph_query`,
+  `ralph_axis_status`, `ralph_self_test`, `ralph_migration_dry_run`)
+
+Honours `--scope user|project|vault`, is idempotent, refuses to clobber, and
+ships a clean `--uninstall`. See `install/CLAUDE_CODE_INSTALL.md` for the
+full surface map.
+
 ## Ralph guarantees baked into every prompt
 
 1. **Idempotent.** Re-running the same day is a no-op (the prompt diffs against

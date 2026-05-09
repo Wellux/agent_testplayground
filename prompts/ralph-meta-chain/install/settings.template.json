@@ -1,0 +1,86 @@
+{
+  "$comment": "Reference Claude Code settings.json that install_claude_code.sh writes (after rewriting hook command paths to point at <target>/.claude/hooks). Drop into ~/.claude/settings.json or .claude/settings.json by hand if you prefer not to use the installer; otherwise the installer merges this with your existing file (set-union for permissions, replace for ralph-tagged hooks).",
+  "permissions": {
+    "allow": [
+      "Read(**)",
+      "Write($VAULT/**)",
+      "Edit($VAULT/**)",
+      "Bash(mkdir:*,grep:*,find:*,wc:*,jq:*,git status,git log:*,test:*,touch:*,mv:*)",
+      "Bash(uv:*,python:*,python3:*,node:*,npm:*)",
+      "Bash(harness:*,ollama:*)",
+      "Agent(Explore)",
+      "Agent(general-purpose)",
+      "TodoWrite"
+    ],
+    "deny": [
+      "Bash(rm:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<TARGET>/.claude/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<TARGET>/.claude/hooks/pre-tool-use.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<TARGET>/.claude/hooks/post-tool-use.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<TARGET>/.claude/hooks/session-end.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "<TARGET>/.claude/hooks/notification.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

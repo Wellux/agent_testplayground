@@ -16,6 +16,64 @@ phased rebuild plan.
 
 ---
 
+## Round 9 (2026-05-09) — Claude Code surface (shipped)
+
+The chain becomes **executable from inside Claude Code** — interactive
+slash commands, axis subagents, lifecycle hooks, an MCP server, and a
+single idempotent installer that wires it all into `~/.claude/`,
+`<repo>/.claude/`, or `$VAULT/.claude/`.
+
+### New artefacts
+
+- **`install/install_claude_code.sh`** — top-level installer.
+  `--scope user|project|vault`, `--dry-run`, `--uninstall`, `--with-mcp`.
+  Idempotent symlinker; refuses to clobber non-symlink files; tracks
+  every artefact in `<target>/.claude/.ralph-installed.json`.
+- **`install/uninstall_claude_code.sh`** — symmetric uninstaller.
+  Removes only what the manifest tracks; preserves user-owned files.
+- **`install/settings.template.json`** — reference settings.json.
+- **`install/CLAUDE_CODE_INSTALL.md`** — user-facing install guide
+  with surface map, troubleshooting, and verification steps.
+- **3 new slash commands** for the missing axes: `/ralph-research`,
+  `/ralph-compress`, `/ralph-evolve`.
+- **`/ralph-cron`** — master dashboard showing all 8 axes (last run,
+  status, next firing).
+- **`agents/`** — 8 axis subagents (`ralph-research`, `ralph-memory`,
+  `ralph-skills`, `ralph-interaction`, `ralph-compress`,
+  `ralph-autoheal`, `ralph-evolve`, `ralph-update`) callable via
+  `Agent(subagent_type=ralph-<axis>)`.
+- **`hooks/session-start.sh`** — SessionStart hook surfacing chain
+  state on every Claude Code launch (per-axis log line, inbox depth,
+  open escalations, STOP sentinels). Fail-safe contract:
+  never blocks, 10s timeout, no network.
+- **`mcp-server/`** — zero-dep stdio MCP server exposing 4 read-only
+  tools to Claude Code: `ralph_query`, `ralph_axis_status`,
+  `ralph_self_test`, `ralph_migration_dry_run`. Implements
+  newline-delimited JSON-RPC 2.0; ~300 LoC pure stdlib.
+
+### Tests
+
+- **`tests/test_install_claude_code.bats`** — 13 cases covering
+  dry-run/wet/idempotent/clobber-refusal/uninstall/scope-isolation.
+- **`tests/test_mcp_server.py`** — 9 protocol cases
+  (initialize/ping/tools-list/tools-call/error-paths/notifications).
+
+### CI
+
+- New `mcp-server` job (`py_compile` + protocol smoke tests).
+- `bats` job extended with the installer test suite.
+
+### Verify
+
+```bash
+prompts/ralph-meta-chain/install/install_claude_code.sh --scope project
+# then in any Claude Code session inside the repo:
+/ralph-cron       # master dashboard
+/ralph-memory     # per-axis dashboard
+```
+
+---
+
 ## Round 8 (2026-05-09) — Phase 1-6 retirement (shipped)
 
 The destructive `git mv` migration that flips master-spec target

@@ -8,9 +8,13 @@ Markdown templates that the user symlinks (or copies) into
 
 | Slash command                  | Wraps                                            | Risk class |
 | ------------------------------ | ------------------------------------------------ | ---------- |
+| `ralph-cron.md`                 | dashboard of all 8 axes (last run, status, next)  | LOW        |
 | `ralph-memory.md`               | open the memory panel; show today's promotions    | LOW        |
 | `ralph-skill.md`                | propose a new skill from the current note         | MEDIUM     |
 | `ralph-experiment.md`           | generate an A/B fixture from the current note     | MEDIUM     |
+| `ralph-research.md`             | show last research-ingest pass + topic coverage   | LOW        |
+| `ralph-compress.md`             | show last hourly compression + pending bloat      | LOW        |
+| `ralph-evolve.md`               | weekly fitness + open evolution proposals         | LOW        |
 | `ralph-autoheal.md`              | invoke `harness self-test` + summarize            | LOW        |
 | `ralph-autoupdate.md`            | open the latest weekly digest                     | LOW        |
 | `ralph-business-review.md`       | open the pending-approvals ledger                  | LOW        |
@@ -18,16 +22,26 @@ Markdown templates that the user symlinks (or copies) into
 
 ## Install
 
-```bash
-# Per-project install:
-ln -s "$REPO/prompts/ralph-meta-chain/commands" .claude/commands
+Use the canonical installer (idempotent; merges settings.json):
 
-# Per-user install:
-mkdir -p ~/.claude/commands
-ln -sf "$REPO/prompts/ralph-meta-chain/commands"/*.md ~/.claude/commands/
+```bash
+# Default: user-scoped (~/.claude/)
+prompts/ralph-meta-chain/install/install_claude_code.sh
+
+# Project-scoped (<repo>/.claude/)
+prompts/ralph-meta-chain/install/install_claude_code.sh --scope project
+
+# Vault-scoped ($VAULT/.claude/, reads vault_path from config.yml)
+prompts/ralph-meta-chain/install/install_claude_code.sh --scope vault
 ```
 
-After install, type `/ralph-memory` etc. in any Claude Code session.
+The installer also wires up `agents/`, `skills/`, `hooks/`, the
+permissions allowlist, and (if `--with-mcp`) the `ralph` MCP server.
+See `install/CLAUDE_CODE_INSTALL.md` for the full surface map.
+
+After install, type `/ralph-cron` (master dashboard) or any per-axis
+command (`/ralph-memory`, `/ralph-research`, etc.) in any Claude Code
+session whose cwd matches the install scope.
 
 ## File shape
 

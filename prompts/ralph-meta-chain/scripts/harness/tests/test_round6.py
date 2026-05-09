@@ -136,16 +136,20 @@ class GreenfieldPluginPresent(unittest.TestCase):
 
 class CommandsTemplates(unittest.TestCase):
     SLUGS = (
+        "ralph-cron",
         "ralph-memory",
         "ralph-skill",
         "ralph-experiment",
+        "ralph-research",
+        "ralph-compress",
+        "ralph-evolve",
         "ralph-autoheal",
         "ralph-autoupdate",
         "ralph-business-review",
         "ralph-migration-plan",
     )
 
-    def test_seven_command_files_present(self) -> None:
+    def test_all_command_files_present(self) -> None:
         existing = sorted(p.stem for p in COMMANDS_DIR.glob("*.md") if p.stem != "README")
         self.assertEqual(set(existing), set(self.SLUGS))
 
