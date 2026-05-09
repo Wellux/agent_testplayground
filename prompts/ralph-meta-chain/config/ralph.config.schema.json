@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Wellux/agent_testplayground/raw/main/prompts/ralph-meta-chain/config/ralph.config.schema.json",
+  "title": "Ralph Meta-Chain config.yml",
+  "description": "Schema for prompts/ralph-meta-chain/config.yml. See config.example.yml for an annotated example.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["vault_path", "model"],
+  "properties": {
+    "vault_path": {
+      "type": "string",
+      "description": "Absolute path or `~/`-prefixed path to the Obsidian vault."
+    },
+    "repo_path": {
+      "type": "string",
+      "description": "Absolute path to the agent_testplayground checkout."
+    },
+    "model": {
+      "type": "string",
+      "description": "Anthropic model id (e.g. claude-sonnet-4-6)."
+    },
+    "log_level": {
+      "type": "string",
+      "enum": ["debug", "info", "warn", "error"]
+    },
+    "ralph": {
+      "type": "object",
+      "properties": {
+        "max_iterations": { "type": "integer", "minimum": 1, "maximum": 64 },
+        "hard_time_cap_minutes": { "type": "integer", "minimum": 1 },
+        "compress_time_cap_minutes": { "type": "integer", "minimum": 1 },
+        "experiment_minutes": { "type": "integer", "minimum": 1 },
+        "promise_token": { "type": "string", "default": "COMPLETE" },
+        "stop_file": { "type": "string", "default": "90-Meta/STOP" }
+      },
+      "required": ["max_iterations", "promise_token"]
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "trailing_window_days": { "type": "integer", "minimum": 1 },
+    "dry_run": { "type": "boolean" },
+    "embeddings": {
+      "type": "object",
+      "properties": {
+        "backend": {
+          "type": "string",
+          "enum": ["local-sqlite-vec", "default", "sqlite-vec", "", "cognee", "letta", "memgpt"]
+        },
+        "provider": { "type": "string" },
+        "base_url": { "type": "string", "format": "uri" },
+        "model": { "type": "string" },
+        "db_path": { "type": "string" },
+        "reindex_on_startup": { "type": "boolean" }
+      }
+    },
+    "research_topics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "harness": {
+      "type": "object",
+      "properties": {
+        "python": { "type": "string" },
+        "fixtures_dir": { "type": "string" },
+        "judge_model": { "type": "string" }
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "allow": { "type": "array", "items": { "type": "string" } },
+        "deny":  { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "approvalMode": {
+      "type": "string",
+      "enum": ["proposal-first", "auto-medium", "paranoid"]
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Wellux/agent_testplayground/raw/main/prompts/ralph-meta-chain/config/memory-frontmatter.schema.json",
+  "title": "Ralph Memory Frontmatter",
+  "description": "YAML frontmatter shape for any Ralph-managed Markdown file. See docs/MEMORY_MODEL.md for the typed taxonomy.",
+  "type": "object",
+  "required": ["ralph_type", "created"],
+  "properties": {
+    "ralph_type": {
+      "type": "string",
+      "enum": [
+        "memory", "skill", "experiment", "report", "research",
+        "decision", "entity", "project", "provider", "business",
+        "migration", "prompt", "system"
+      ]
+    },
+    "memory_layer": {
+      "type": "string",
+      "enum": [
+        "raw", "episodic", "semantic", "procedural", "preference",
+        "interaction", "entity", "project", "decision", "business",
+        "research", "experiment", "system", "canonical", "report",
+        "migration"
+      ]
+    },
+    "memory_temperature": {
+      "type": "string",
+      "enum": ["hot", "warm", "cold", "frozen"]
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date YYYY-MM-DD."
+    },
+    "updated": {
+      "type": "string",
+      "format": "date"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["manual", "cron", "plugin", "harness", "claude-code", "import", "migration", "research", "seed"]
+    },
+    "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+    "stability": {
+      "type": "string",
+      "enum": ["volatile", "provisional", "stable", "canonical", "deprecated"]
+    },
+    "privacy": {
+      "type": "string",
+      "enum": ["private", "work", "client", "public"]
+    },
+    "provider": {
+      "type": "string",
+      "enum": [
+        "claude-code", "provider-neutral",
+        "openai-codex-deferred", "gemini-ai-studio-deferred",
+        "local-models-deferred"
+      ]
+    },
+    "approval_required": { "type": "boolean" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "proposed", "approved", "active", "archived", "deprecated", "scaffold", "mirror", "template"]
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "related": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "summary": { "type": "string", "maxLength": 280 },
+
+    "name":          { "type": "string" },
+    "description":   { "type": "string" },
+    "when_to_use":   { "type": "string" },
+    "inputs":        { "type": "array" },
+    "steps":         { "type": "array" },
+    "tools":         { "type": "array", "items": { "type": "string" } },
+    "failure_modes": { "type": "array" },
+    "last_validated":{ "type": "string", "format": "date" },
+    "metrics":       { "type": "object" },
+    "prerequisites":     { "type": "array", "items": { "type": "string" } },
+    "is_prerequisite_of":{ "type": "array", "items": { "type": "string" } },
+    "links":         { "type": "array", "items": { "type": "string" } },
+
+    "last_rewritten":     { "type": "string", "format": "date" },
+    "validated_against":  { "type": "array", "items": { "type": "string" } },
+    "bin":                { "type": "string" },
+    "reflections":        { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Wellux/agent_testplayground/raw/main/prompts/ralph-meta-chain/config/provider-interface.schema.json",
+  "title": "Ralph Provider Adapter Spec",
+  "description": "13-field contract every Ralph runtime adapter must satisfy. See providers/provider-interface.md for prose; this schema is the machine-checkable form.",
+  "type": "object",
+  "required": [
+    "prompt_input_format",
+    "context_package_format",
+    "memory_retrieval_package_format",
+    "tool_permission_model",
+    "file_read_write_model",
+    "shell_execution_model",
+    "approval_gate_model",
+    "output_report_format",
+    "error_format",
+    "evaluation_format",
+    "logging_format",
+    "rollback_expectation",
+    "provider_metadata"
+  ],
+  "properties": {
+    "prompt_input_format":             { "type": "string", "minLength": 1 },
+    "context_package_format":          { "type": "string", "minLength": 1 },
+    "memory_retrieval_package_format": { "type": "string", "minLength": 1 },
+    "tool_permission_model":           { "type": "string", "minLength": 1 },
+    "file_read_write_model":           { "type": "string", "minLength": 1 },
+    "shell_execution_model":           { "type": "string", "minLength": 1 },
+    "approval_gate_model":             { "type": "string", "minLength": 1 },
+    "output_report_format":            { "type": "string", "minLength": 1 },
+    "error_format":                    { "type": "string", "minLength": 1 },
+    "evaluation_format":               { "type": "string", "minLength": 1 },
+    "logging_format":                  { "type": "string", "minLength": 1 },
+    "rollback_expectation":            { "type": "string", "minLength": 1 },
+    "provider_metadata": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id":       { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+        "version":  { "type": "string" },
+        "capabilities": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
