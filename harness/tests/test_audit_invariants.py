@@ -202,5 +202,73 @@ class StageBArtifactsTracked(unittest.TestCase):
         self.assertTrue(log.is_file(), "migration-log.md missing (Stage B should track)")
 
 
+class StageCArtifactsTracked(unittest.TestCase):
+    """Stage C-readiness artifacts (preview + post-apply CI template)."""
+
+    def test_preview_doc_present(self) -> None:
+        preview = MIGRATION / "STAGE_C_PREVIEW.md"
+        self.assertTrue(preview.is_file(), "STAGE_C_PREVIEW.md missing")
+        text = preview.read_text()
+        for required in (
+            "Phase 1-6 → master-spec target (50 git mv operations)",
+            "Round 6-superseded → archive",
+            "Round 1-superseded → archive",
+            "CI workflow update",
+            "Six gates",
+            "Decision checklist",
+        ):
+            self.assertIn(required, text,
+                          f"STAGE_C_PREVIEW.md missing section: {required}")
+
+    def test_post_round8_ci_template_present_and_yaml_valid(self) -> None:
+        template = MIGRATION / "STAGE_C_CI_WORKFLOW.yml"
+        self.assertTrue(template.is_file(), "STAGE_C_CI_WORKFLOW.yml missing")
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        data = yaml.safe_load(template.read_text())
+        self.assertIn("jobs", data)
+        # Post-Round-8 jobs: privacy + shell + validators + python +
+        # voice-server + plugin (plugin-greenfield merges into plugin
+        # since obsidian-ralph/ is archived).
+        for required_job in (
+            "privacy", "shell", "validators", "python",
+            "voice-server", "plugin",
+        ):
+            self.assertIn(required_job, data["jobs"],
+                          f"post-Round-8 CI missing job: {required_job}")
+
+    def test_post_round8_ci_template_uses_master_spec_paths(self) -> None:
+        template = MIGRATION / "STAGE_C_CI_WORKFLOW.yml"
+        try:
+            import yaml
+        except ImportError:
+            self.skipTest("PyYAML not installed")
+        data = yaml.safe_load(template.read_text())
+        py_wd = data["jobs"]["python"]["defaults"]["run"]["working-directory"]
+        self.assertEqual(py_wd, "prompts/ralph-meta-chain/scripts/harness")
+        vs_wd = data["jobs"]["voice-server"]["defaults"]["run"]["working-directory"]
+        self.assertEqual(vs_wd, "prompts/ralph-meta-chain/voice-server")
+        pl_wd = data["jobs"]["plugin"]["defaults"]["run"]["working-directory"]
+        self.assertEqual(pl_wd, "prompts/ralph-meta-chain/obsidian-plugin")
+
+    def test_apply_help_documents_update_ci_flag(self) -> None:
+        apply_script = MIGRATION / "scripts" / "ralph_apply_migration.sh"
+        rc, out, _ = _run([str(apply_script), "--help"])
+        self.assertEqual(rc, 0)
+        self.assertIn("--update-ci", out,
+                      "apply --help should document --update-ci")
+        self.assertIn("STAGE_C_CI_WORKFLOW.yml", out,
+                      "apply --help should reference the template name")
+
+    def test_apply_with_update_ci_alone_default_dry_runs(self) -> None:
+        rc, _, _ = _run([
+            str(MIGRATION / "scripts" / "ralph_apply_migration.sh"),
+            "--update-ci",
+        ])
+        self.assertEqual(rc, 64, "--update-ci alone must dry-run (gates 4-5 missing)")
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

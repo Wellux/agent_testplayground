@@ -10,6 +10,12 @@
 #   6. git working tree is clean (no uncommitted changes elsewhere)
 #
 # Without ALL six, defaults to dry-run (prints intended moves, exits 64).
+#
+# Optional flag:
+#   --update-ci    after the moves, copies migration/STAGE_C_CI_WORKFLOW.yml
+#                  over .github/workflows/ci.yml (single-step CI update).
+#                  Off by default — most safe-first invocations should
+#                  update CI in a separate explicit commit.
 
 set -euo pipefail
 
@@ -17,7 +23,17 @@ HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib/common.sh
 source "$HERE/lib/common.sh"
 
-ralph_parse_flags "$@"
+# Parse our own flags FIRST — common's parser doesn't know about --update-ci.
+RALPH_UPDATE_CI=0
+filtered_args=()
+for arg in "$@"; do
+  case "$arg" in
+    --update-ci) RALPH_UPDATE_CI=1 ;;
+    *) filtered_args+=("$arg") ;;
+  esac
+done
+
+ralph_parse_flags "${filtered_args[@]}"
 if [[ ${RALPH_HELP:-0} -eq 1 ]]; then
   ralph_print_help_header "ralph_apply_migration.sh" "Execute proposed-moves.md (CRITICAL)."
   cat <<EOF
@@ -27,6 +43,8 @@ WHAT IT DOES
   - With --apply --confirmed AND RALPH_MIGRATION_APPROVED matching the
     proposed-moves.md sha256, performs every git mv in order.
   - Without all gates, dry-runs (prints intended moves) and exits 64.
+  - With --update-ci, also copies migration/STAGE_C_CI_WORKFLOW.yml
+    over .github/workflows/ci.yml (default off).
 
 RISK CLASS
   CRITICAL. Six independent gates required.
@@ -35,11 +53,18 @@ ENV
   RALPH_MIGRATION_APPROVED  hex sha256 of migration/proposed-moves.md;
                             must match exactly when --apply --confirmed.
 
+FLAGS
+  --apply         intent to mutate (paired with --confirmed)
+  --confirmed     second confirmation
+  --update-ci     also rewrite .github/workflows/ci.yml in-place
+                  (uses migration/STAGE_C_CI_WORKFLOW.yml)
+  --help          this message
+
 EXIT CODES
   0   apply succeeded (or dry-run completed)
   64  default-dry-run; gates not all present
   65  conflicts present; refusing
-  66  artifacts missing
+  66  artifacts missing (incl. STAGE_C_CI_WORKFLOW.yml when --update-ci)
   67  approval token mismatch
   68  git tree dirty; refusing
 EOF
@@ -157,6 +182,33 @@ fi
 } >> "$audit"
 
 ralph_log "apply complete. $total_moves move(s)."
-ralph_log "next: run \`harness self-test\` to confirm no regression."
+
+# Optional: update .github/workflows/ci.yml in the same step.
+if [[ ${RALPH_UPDATE_CI:-0} -eq 1 ]]; then
+  template="$mig/STAGE_C_CI_WORKFLOW.yml"
+  ci_target="$repo/.github/workflows/ci.yml"
+  if [[ ! -f "$template" ]]; then
+    ralph_error "--update-ci requested but $template missing"
+    exit 66
+  fi
+  if [[ ! -f "$ci_target" ]]; then
+    ralph_error "--update-ci requested but $ci_target missing"
+    exit 66
+  fi
+
+  # Backup live CI before overwriting (separate from the Stage B backup).
+  ci_backup="$mig/ci-backup-$(date -u +%Y%m%dT%H%M%SZ)-pre-update.yml"
+  cp "$ci_target" "$ci_backup"
+  ralph_log "ci-backup saved: ${ci_backup#"$repo/"}"
+
+  cp "$template" "$ci_target"
+  ralph_log "ci.yml updated from $(basename "$template")"
+
+  {
+    echo "## [$ts] migration | op=ci-update template=STAGE_C_CI_WORKFLOW.yml backup=$(basename "$ci_backup")"
+  } >> "$audit"
+fi
+
+ralph_log "next: run \`harness self-test\` (now at the new path) to confirm no regression."
 
 echo "$total_moves"
