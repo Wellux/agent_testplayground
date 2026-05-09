@@ -39,6 +39,7 @@ SHIM_NAMES = (
     "ralph_check_links.sh",
     "ralph_provider_validate.sh",
     "ralph_business_ledger_check.sh",
+    "ralph_bootstrap_embed.sh",
 )
 
 
@@ -53,7 +54,7 @@ def _run(cmd: list[str], env: dict | None = None, timeout: int = 20) -> tuple[in
 
 
 class ShimsPresent(unittest.TestCase):
-    def test_15_shims_present(self) -> None:
+    def test_all_shims_present(self) -> None:
         existing = sorted(p.name for p in SCRIPTS.glob("ralph_*.sh"))
         self.assertEqual(set(existing), set(SHIM_NAMES),
                          f"shim list mismatch:\n  got: {existing}")

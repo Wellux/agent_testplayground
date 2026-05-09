@@ -22,7 +22,7 @@ prompts/ralph-meta-chain/obsidian-plugin/node_modules/
 prompts/ralph-meta-chain/obsidian-plugin/.npm/
 prompts/ralph-meta-chain/obsidian-plugin/dist/
 
-# Harness build/run artifacts
+# Harness build/run artifacts (Phase 1-6 reference + post-Round-8 path)
 harness/.venv/
 harness/__pycache__/
 harness/**/__pycache__/
@@ -30,6 +30,13 @@ harness/.pytest_cache/
 harness/.uv/
 harness/dist/
 harness/*.egg-info/
+prompts/ralph-meta-chain/scripts/harness/.venv/
+prompts/ralph-meta-chain/scripts/harness/uv.lock
+prompts/ralph-meta-chain/scripts/harness/__pycache__/
+prompts/ralph-meta-chain/scripts/harness/**/__pycache__/
+prompts/ralph-meta-chain/scripts/harness/.pytest_cache/
+prompts/ralph-meta-chain/scripts/harness/dist/
+prompts/ralph-meta-chain/scripts/harness/*.egg-info/
 
 # Python
 __pycache__/

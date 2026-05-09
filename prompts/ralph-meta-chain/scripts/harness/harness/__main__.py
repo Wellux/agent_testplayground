@@ -62,9 +62,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_t.add_argument("--tail", type=int, default=200)
     p_t.add_argument("--axis", default=None, help="filter to one axis")
 
-    p_st = sub.add_parser("self-test", help="Local CI mirror; writes 90-Meta/heal-checks.ndjson")
+    p_st = sub.add_parser("self-test", help="Local CI mirror; appends to 90-Meta/heal-checks.ndjson by default")
     p_st.add_argument("--only", default=None,
                       help="run a single check: privacy | shell | python | unit-tests | plugin")
+    p_st.add_argument("--no-log", action="store_true",
+                      help="skip the heal-checks.ndjson append (truly read-only mode for MCP / dashboards)")
 
     return parser
 
@@ -148,6 +150,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             only=args.only,
             vault_override=args.vault,
             config_path=args.config,
+            no_log=args.no_log,
         )
     return 64
 

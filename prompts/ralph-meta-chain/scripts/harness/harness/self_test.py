@@ -222,6 +222,7 @@ def run(
     only: str | None,
     vault_override: str | None,
     config_path: str | None,
+    no_log: bool = False,
 ) -> int:
     cfg = load_config(config_path)
     vault = resolve_vault(vault_override, cfg)
@@ -232,11 +233,12 @@ def run(
         log.error("no check named %r; valid: %s", only, ", ".join(CHECK_NAMES))
         return 64
 
-    out_path = vault / "90-Meta" / "heal-checks.ndjson"
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("a", encoding="utf8") as f:
-        for c in checks:
-            f.write(json.dumps(asdict(c), separators=(",", ":")) + "\n")
+    if not no_log:
+        out_path = vault / "90-Meta" / "heal-checks.ndjson"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with out_path.open("a", encoding="utf8") as f:
+            for c in checks:
+                f.write(json.dumps(asdict(c), separators=(",", ":")) + "\n")
 
     failed = [c for c in checks if not c.ok]
     if failed:

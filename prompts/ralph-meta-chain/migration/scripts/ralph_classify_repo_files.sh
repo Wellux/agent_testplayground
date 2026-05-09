@@ -49,6 +49,9 @@ classify() {
   local p="$1"
   case "$p" in
     */_archive/*|*/_processed/*|*/_rejected/*) echo archive ;;
+    # Breadcrumb READMEs at retired legacy roots (Round 8 follow-up):
+    # intentional pointers from old paths to canonical, NOT legacy code.
+    harness/README.md|voice-server/README.md|obsidian-ralph/README.md|scripts/README.md) echo unrelated ;;
     prompts/ralph-meta-chain/migration/*)      echo migration ;;
     prompts/ralph-meta-chain/business-entity/*) echo business-entity ;;
     prompts/ralph-meta-chain/providers/*)      echo provider-adapters ;;
@@ -79,6 +82,10 @@ classify() {
 target_path() {
   local p="$1"
   case "$p" in
+    # Breadcrumb READMEs at retired legacy roots stay put (no-op).
+    harness/README.md|voice-server/README.md|obsidian-ralph/README.md|scripts/README.md)
+      echo "$p"
+      ;;
     harness/*)
       echo "prompts/ralph-meta-chain/scripts/${p}"
       ;;

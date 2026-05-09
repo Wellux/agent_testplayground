@@ -232,6 +232,89 @@ class ReflectAppend(unittest.TestCase):
             self.assertEqual(front["reflections"], ["[2026-05-09] terse rubric ok"])
 
 
+class CompressPreservesFrontmatter(unittest.TestCase):
+    """Codex round-5 P2: harness compress must preserve required
+    frontmatter on the rewritten note. Pre-fix the replacement only
+    had `compressed_from` + `compressed_at`, missing `ralph_type` +
+    `created` — so vault validators rejected every compressed note."""
+
+    def test_extracts_and_preserves_required_fields(self) -> None:
+        from harness.compress import _extract_frontmatter, _PRESERVE_FM_FIELDS
+        body = (
+            "---\n"
+            "ralph_type: memory\n"
+            "memory_layer: semantic\n"
+            "memory_temperature: warm\n"
+            "created: 2026-04-15\n"
+            "tags: [project, ralph]\n"
+            "privacy: private\n"
+            "stability: stable\n"
+            "irrelevant_field: foo\n"
+            "---\n\n"
+            "# Some note\n"
+        )
+        fields, rest = _extract_frontmatter(body)
+        # Top-level scalar fields are extracted.
+        self.assertEqual(fields.get("ralph_type"), "memory")
+        self.assertEqual(fields.get("created"), "2026-04-15")
+        self.assertIn("memory_layer", fields)
+        self.assertIn("memory_temperature", fields)
+        # _PRESERVE_FM_FIELDS includes ralph_type + created at minimum.
+        self.assertIn("ralph_type", _PRESERVE_FM_FIELDS)
+        self.assertIn("created", _PRESERVE_FM_FIELDS)
+        # Body after frontmatter survives intact.
+        self.assertIn("# Some note", rest)
+
+    def test_write_compressed_emits_required_fields(self) -> None:
+        from harness.compress import _write_compressed
+        with tempfile.TemporaryDirectory() as d:
+            target = pathlib.Path(d) / "30-Notes" / "test-note.md"
+            target.parent.mkdir(parents=True)
+            preserved = {
+                "ralph_type": "memory",
+                "memory_layer": "semantic",
+                "memory_temperature": "warm",
+                "created": "2026-04-15",
+                "tags": "[project, ralph]",
+                "privacy": "private",
+            }
+            _write_compressed(
+                target, "_archive/test-note-original.md",
+                "Compressed summary text.",
+                preserved,
+            )
+            text = target.read_text()
+            # Required fields per memory-frontmatter.schema.json.
+            self.assertIn("ralph_type: memory", text)
+            self.assertIn("created: 2026-04-15", text)
+            # Useful preserved fields.
+            self.assertIn("memory_layer: semantic", text)
+            self.assertIn("memory_temperature: warm", text)
+            self.assertIn("tags: [project, ralph]", text)
+            self.assertIn("privacy: private", text)
+            # Compression-specific fields layered on top.
+            self.assertIn("compressed_from:", text)
+            self.assertIn("compressed_at:", text)
+            self.assertIn("Compressed summary text.", text)
+            self.assertIn("> Archived: [[test-note-original]]", text)
+
+    def test_write_compressed_defaults_when_legacy_note_missing_fields(self) -> None:
+        """Legacy note without ralph_type still produces a valid
+        rewritten note (defaults to ralph_type: memory)."""
+        from harness.compress import _write_compressed
+        with tempfile.TemporaryDirectory() as d:
+            target = pathlib.Path(d) / "test-legacy.md"
+            _write_compressed(
+                target, "_archive/test-legacy-original.md",
+                "Summary.",
+                preserved={},  # No fields — legacy file.
+            )
+            text = target.read_text()
+            self.assertIn("ralph_type: memory", text)
+            self.assertIn("memory_layer: semantic", text)
+            self.assertIn("created: ", text)
+
+
 class HeuristicVerdict(unittest.TestCase):
     def test_candidate_wins_when_better_rubric_and_fewer_tokens(self) -> None:
         from harness.reflect import _heuristic_verdict
@@ -342,6 +425,24 @@ class SelfTest(unittest.TestCase):
             row = json.loads(ndjson.strip().splitlines()[0])
             self.assertEqual(row["name"], "privacy")
             self.assertTrue(row["ok"])
+
+    def test_no_log_skips_ndjson_write(self) -> None:
+        """Regression for Codex P2: MCP-driven self-test must NOT mutate
+        the heal-checks audit log. The --no-log flag suppresses the
+        append while still returning the check rc + detail.
+        """
+        from harness.self_test import run
+        with tempfile.TemporaryDirectory() as d:
+            vault = pathlib.Path(d) / "vault"
+            (vault / "90-Meta").mkdir(parents=True)
+            os.environ["VAULT"] = str(vault)
+            rc = run(only="privacy",
+                     vault_override=str(vault),
+                     config_path=str(REPO / "prompts" / "ralph-meta-chain" / "config.yml"),
+                     no_log=True)
+            self.assertEqual(rc, 0)
+            # The audit file must not have been created.
+            self.assertFalse((vault / "90-Meta" / "heal-checks.ndjson").exists())
 
     def test_only_short_circuits_other_checks(self) -> None:
         """Regression: --only=privacy must NOT run _check_unit_tests

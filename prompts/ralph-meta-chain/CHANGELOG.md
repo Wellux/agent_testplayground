@@ -16,6 +16,354 @@ phased rebuild plan.
 
 ---
 
+## Round 11 (2026-05-09) — Launch documentation
+
+Four new top-level docs to make the chain genuinely usable by someone
+who hasn't been in the conversation history:
+
+- **`docs/QUICKSTART_CLAUDE_CODE.md`** — git-clone-to-running guide
+  for Claude Code. Prerequisites, 6-step path, troubleshooting, vault
+  setup, optional cron registration. Targets <10 min from clone to
+  first `/ralph-cron` invocation.
+- **`docs/QUICKSTART_CODEX.md`** — same for OpenAI Codex CLI. Mirrors
+  the Claude Code guide; documents Codex-specific differences
+  (skills > prompts, no hooks, no Agent tool).
+- **`docs/PRD.md`** — product requirements: problem statement, 6
+  goals + 5 non-goals, 3 personas, user journey, architecture
+  diagram, surface counts, success metrics (qualitative + quantitative),
+  approval classes, 5 open questions for the next maintainer.
+- **`docs/HANDOFF.md`** — comprehensive handoff for the next person:
+  current state matrix, test counts (~204 cases), CI state, Kilo +
+  Codex bot review history, 8 backlog items ordered by leverage with
+  size estimates + designs, how-to-extend recipes (new axis, new MCP
+  tool, new install target, new specialist skill), pointer index.
+
+Plus updated entry points:
+- top-level `README.md` — adds the quick-starts table at the top
+- `prompts/ralph-meta-chain/README.md` — adds the new-here banner
+
+## Round 10.4 (2026-05-09) — Codex P2-3 + P2-4 fixes
+
+Two real correctness bugs in the Codex installer caught by the
+Codex-bot review.
+
+### P2-3: Codex prompts leaked to user-global `~/.codex/`
+
+`install_codex.sh --scope project` (or vault) wrote prompts to the
+user-global `$CODEX_HOME/prompts/` instead of the scoped install
+target. Two consequences:
+1. A "supposedly scoped install" silently mutated user-global Codex
+   slash commands.
+2. The scoped manifest then OWNED those global symlinks, so
+   uninstalling a project install would remove user-global prompts.
+
+Fix: `PROMPTS_DIR + TOML_FILE + MANIFEST_DIR` derived from `$SCOPE`
+in a single case statement so all four artefact paths
+(skills/prompts/toml/briefing) live under the same root per scope:
+
+| Scope | Skills | Prompts | TOML |
+| --- | --- | --- | --- |
+| user | `~/.agents/skills/` | `~/.codex/prompts/` | `~/.codex/config.toml` |
+| project | `<repo>/.agents/skills/` | `<repo>/.codex/prompts/` | `<repo>/.codex/config.toml` |
+| vault | `<vault>/.agents/skills/` | `<vault>/.codex/prompts/` | `<vault>/.codex/config.toml` |
+
+### P2-4: Uninstaller unconditionally stripped user-global config.toml
+
+For project/vault installs, `WITH_MCP=no` (skips MCP) but the
+uninstaller still always called `strip_mcp` against
+`$CODEX_HOME/config.toml` — clobbering an unrelated user-scope MCP
+block.
+
+Fix: uninstaller reads the manifest's `with_mcp` and `toml_file` fields.
+`strip_mcp()` short-circuits if `with_mcp == false`. Empty-dir
+cleanup also became scope-aware so we never `rmdir $CODEX_HOME` on a
+project uninstall.
+
+### Tests added
+
+`test_install_codex.bats` regression cases #20 and #21 (now 21/21):
+
+- #20 pre-seeds `$CODEX_HOME/prompts/my-personal.md`, runs project
+  install, asserts user-global still contains ONLY `my-personal.md`.
+- #21 pre-seeds `$CODEX_HOME/config.toml` with a manually-managed
+  `[mcp_servers.ralph]` block, runs project install + uninstall,
+  asserts sha256 unchanged before / after / between, asserts uninstaller
+  emits `manifest says with_mcp=false` skip line.
+
+## Round 10.3 (2026-05-09) — Codex P2-2 follow-up: self-test side effects
+
+`ralph_self_test` MCP tool said "read-only" but `harness self-test`
+appends one row per check to `$VAULT/90-Meta/heal-checks.ndjson`.
+
+Fix: added `--no-log` flag to `harness self-test`. MCP tool always
+passes it (hardcoded into argv). The cron-owned `06-autoheal` axis
+keeps the default logged mode for its audit trail.
+
+## Round 10.2 (2026-05-09) — Codex P2-1 + P2-2 fixes
+
+P2-1: install_codex.sh TOML merge could produce duplicate
+`[mcp_servers.ralph]` tables (invalid TOML) when a user had a
+manually-set or older-installer block without the marker comment.
+Fixed: strip in two passes (marker-tagged + bare).
+
+P2-2: `ralph_migration_dry_run` MCP tool advertised as read-only but
+underlying script writes proposal Markdown. Fixed: tool description
+now explicitly lists every file written + how to revert via
+`git restore prompts/ralph-meta-chain/migration/`.
+
+## Round 10.1 (2026-05-09) — MCP bug fixes + unified dispatcher
+
+Three follow-ups on Rounds 9 + 10:
+
+### MCP server bug fixes (caught by the new harness-integration tests)
+
+- **`ralph_query` was passing `--limit`** to `harness query` but the
+  CLI's flag is `--k`. Result: every semantic query failed with
+  argparse error. Fixed.
+- **`ralph_migration_dry_run` was calling `harness migration propose --dry-run`**
+  but `harness` has no `migration` subcommand — migration is owned by
+  `migration/scripts/ralph_propose_migration.sh`. Fixed: invokes the
+  shell script and surfaces the proposed-moves + conflicts counts.
+
+Both bugs slipped through Round 9 because the original tests only
+exercised the protocol surface (initialize, tools/list, error paths)
+without verifying the EXACT command-line constructed for the harness
+shell-out. Added 4 regression tests with a fake `harness` binary on
+PATH that records argv to a file, so future drift is caught.
+
+### Unified `install.sh` dispatcher
+
+`install/install.sh` is a single entry point that fans out to the
+three per-target installers:
+
+```bash
+install.sh --target all                         # cron + claude-code + codex
+install.sh --target claude-code,codex --scope user
+install.sh --target codex --dry-run -- --without-mcp --without-prompts
+install.sh --target all --uninstall
+```
+
+Per-target installers are still callable directly; the dispatcher is
+purely additive. Honours `--scope`, `--dry-run`, `--uninstall`, and
+forwards anything after `--` to each per-target installer (so
+installer-specific flags like `--without-mcp` work without expanding
+the dispatcher's own arg parser).
+
+### Tests added (12 cases)
+
+- `tests/test_install_dispatcher.bats` — covers usage errors, target
+  expansion, `--scope` propagation, `--` passthrough, wet
+  install/uninstall round-trip, dry-run.
+
+### Counts
+
+13 MCP server tests (was 9; +4 regression coverage) ✓
+12 dispatcher bats tests (NEW) ✓
+18 Codex installer bats tests ✓
+13 Claude Code installer bats tests ✓
+103 harness unit tests ✓
+
+---
+
+## Round 10 (2026-05-09) — Codex surface (shipped)
+
+The chain becomes **executable from inside the OpenAI Codex CLI** too,
+mirroring the Round 9 Claude Code install. The shared MCP server now
+serves both agents (JSON config for Claude Code, TOML config for Codex).
+
+### What landed
+
+- **`install/install_codex.sh`** — Codex installer. `--scope user|project|vault`,
+  `--dry-run`, `--uninstall`, `--with-mcp`/`--without-mcp`,
+  `--without-prompts`. Idempotent; refuses to clobber; tracks every
+  artefact in `<target>/.codex/.ralph-installed.json`.
+- **`install/uninstall_codex.sh`** — symmetric uninstaller. Strips the
+  `[mcp_servers.ralph]` block from `~/.codex/config.toml` (preserves
+  user-added blocks byte-for-byte).
+- **`install/AGENTS.template.md`** — Codex's auto-loaded briefing
+  (equivalent of `CLAUDE.md`). Marker-tagged so the uninstaller can
+  tell user-edited copies apart from RALPH-managed ones.
+- **`install/CODEX_INSTALL.md`** — user-facing install guide with
+  surface map, troubleshooting, coexistence notes.
+
+### Surface mapping (Claude Code → Codex)
+
+| Claude Code              | Codex equivalent              | Notes                                |
+| ------------------------ | ----------------------------- | ------------------------------------ |
+| `~/.claude/commands/`    | `~/.codex/prompts/`           | works; deprecated upstream            |
+| `~/.claude/agents/`      | folded into `.agents/skills/` | Codex has no Agent-tool subagents    |
+| `~/.claude/skills/`      | `~/.agents/skills/`           | direct mirror; same SKILL.md format  |
+| `~/.claude/hooks/`       | _(none)_                      | Codex has no lifecycle hooks         |
+| `~/.claude/.mcp.json`    | `~/.codex/config.toml`        | same MCP server; different format    |
+| `CLAUDE.md`              | `AGENTS.md`                   | both auto-load from cwd-up           |
+
+### What gets deployed
+
+- **8 specialist skills** symlinked from `skills/<slug>/` →
+  `<skills_root>/<slug>/`.
+- **8 axis subagents** wrapped in skill directories (one
+  `<axis>/SKILL.md` per axis, symlinked to `agents/ralph-<axis>.md`).
+- **11 slash-command prompts** symlinked from `commands/*.md` →
+  `~/.codex/prompts/*.md` (skip with `--without-prompts`).
+- **`[mcp_servers.ralph]` block** appended to `~/.codex/config.toml`
+  via text-merge that preserves all user content.
+- **AGENTS.md briefing** copied to `<briefing_dir>/AGENTS.md` (only
+  if not already present; never clobbers).
+
+### Tests
+
+- **`tests/test_install_codex.bats`** — 18 cases covering every
+  install/uninstall path, including:
+  - dry-run / wet / idempotent / clobber-refusal
+  - TOML round-trip with pre-existing user content preserved
+  - AGENTS.md marker handling (user-edited copies left alone)
+  - `--without-mcp` / `--without-prompts` / `--scope project` paths
+  - second-install AGENTS.md tracking (regression for the bug found
+    during dev where user-kept files weren't re-tracked).
+- CI's `bats` job extended with the Codex installer suite.
+
+### Coexistence
+
+Both installers can run independently and idempotently — they write
+to disjoint paths. The shared `mcp-server/` is referenced by both;
+re-installing one doesn't disturb the other.
+
+### Verify
+
+```bash
+# Install both surfaces (or pick one)
+prompts/ralph-meta-chain/install/install_claude_code.sh
+prompts/ralph-meta-chain/install/install_codex.sh
+
+# Then in a Codex session — implicit skill matching:
+> "Promote the inbox notes from yesterday."
+# Codex routes to ralph-memory skill via description match.
+
+# Or explicitly:
+> /ralph-cron
+```
+
+---
+
+## Round 9 (2026-05-09) — Claude Code surface (shipped)
+
+The chain becomes **executable from inside Claude Code** — interactive
+slash commands, axis subagents, lifecycle hooks, an MCP server, and a
+single idempotent installer that wires it all into `~/.claude/`,
+`<repo>/.claude/`, or `$VAULT/.claude/`.
+
+### New artefacts
+
+- **`install/install_claude_code.sh`** — top-level installer.
+  `--scope user|project|vault`, `--dry-run`, `--uninstall`, `--with-mcp`.
+  Idempotent symlinker; refuses to clobber non-symlink files; tracks
+  every artefact in `<target>/.claude/.ralph-installed.json`.
+- **`install/uninstall_claude_code.sh`** — symmetric uninstaller.
+  Removes only what the manifest tracks; preserves user-owned files.
+- **`install/settings.template.json`** — reference settings.json.
+- **`install/CLAUDE_CODE_INSTALL.md`** — user-facing install guide
+  with surface map, troubleshooting, and verification steps.
+- **3 new slash commands** for the missing axes: `/ralph-research`,
+  `/ralph-compress`, `/ralph-evolve`.
+- **`/ralph-cron`** — master dashboard showing all 8 axes (last run,
+  status, next firing).
+- **`agents/`** — 8 axis subagents (`ralph-research`, `ralph-memory`,
+  `ralph-skills`, `ralph-interaction`, `ralph-compress`,
+  `ralph-autoheal`, `ralph-evolve`, `ralph-update`) callable via
+  `Agent(subagent_type=ralph-<axis>)`.
+- **`hooks/session-start.sh`** — SessionStart hook surfacing chain
+  state on every Claude Code launch (per-axis log line, inbox depth,
+  open escalations, STOP sentinels). Fail-safe contract:
+  never blocks, 10s timeout, no network.
+- **`mcp-server/`** — zero-dep stdio MCP server exposing 4 read-only
+  tools to Claude Code: `ralph_query`, `ralph_axis_status`,
+  `ralph_self_test`, `ralph_migration_dry_run`. Implements
+  newline-delimited JSON-RPC 2.0; ~300 LoC pure stdlib.
+
+### Tests
+
+- **`tests/test_install_claude_code.bats`** — 13 cases covering
+  dry-run/wet/idempotent/clobber-refusal/uninstall/scope-isolation.
+- **`tests/test_mcp_server.py`** — 9 protocol cases
+  (initialize/ping/tools-list/tools-call/error-paths/notifications).
+
+### CI
+
+- New `mcp-server` job (`py_compile` + protocol smoke tests).
+- `bats` job extended with the installer test suite.
+
+### Verify
+
+```bash
+prompts/ralph-meta-chain/install/install_claude_code.sh --scope project
+# then in any Claude Code session inside the repo:
+/ralph-cron       # master dashboard
+/ralph-memory     # per-axis dashboard
+```
+
+---
+
+## Round 8 (2026-05-09) — Phase 1-6 retirement (shipped)
+
+The destructive `git mv` migration that flips master-spec target
+paths into the canonical layout. Five commits across three stages:
+
+- **Stage A (`b8a6e8c`)** — read-only pipeline + RUNBOOK +
+  pre-migrated retarget. Inventory → classify → propose runs clean,
+  voice-multidevice retargets to `_archive/_pre-migrated/` because
+  `prompts/ralph-meta-chain/docs/` already exists.
+- **Stage B (`09e036e`)** — CI workflow backup + audit-log + dry-run
+  apply. `STAGE_C_CI_WORKFLOW.yml` checked into git (the post-apply
+  workflow). `--update-ci` flag added to the apply script; dry-run
+  passes 6 gates.
+- **Stage C apply (`2d2509a`)** — full apply: **65 `git mv`** moves,
+  **14 path retargets** (pre-migrated archive), **1 atomic CI rewrite**
+  (`.github/workflows/ci.yml` ← `STAGE_C_CI_WORKFLOW.yml`), 6 gates
+  verified. Plus 3 Codex round-3 P2 fixes (compress.py YAML delimiter,
+  voice-server same-second collisions, voice-server cwd).
+- **Stage C P1 fixes (`f34c8c3`)** — post-apply path drift caught by
+  Codex round 4: `harness/__init__.py` and `install_cron.sh` had
+  `parents[N]` / `dirname/..` resolution that broke when the harness
+  moved to `prompts/ralph-meta-chain/scripts/harness/`. Replaced with
+  walk-up-to-`.git` `_find_repo_root()` helpers (4 regression tests).
+- **Stage C `--dry-run` fix (`ac57b6b`)** — `install_cron.sh --dry-run`
+  was requiring `claude` on PATH unconditionally; gated the check
+  behind `[[ $DRY_RUN -eq 0 ]]`.
+
+Result: `prompts/ralph-meta-chain/` is now the canonical layout. Old
+root paths are either at master-spec targets via `git mv` or archived
+under `prompts/ralph-meta-chain/migration/_archive/_pre-migrated/<old>/`.
+Rollback path: `migration/scripts/ralph_rollback_migration.sh` reads
+`migration/rollback-plan.md` (mirror of moves) — all 65 moves are
+reversible.
+
+References: `migration/STAGE_C_PREVIEW.md`, `migration/STAGE_B_SUMMARY.md`,
+`docs/ROUND_8_RUNBOOK.md`.
+
+### Round 8 follow-up — Codex round-5 P2 fixes (`675c9fe`)
+
+Three findings landed after Stage C; all fixed in one commit:
+
+- Plugin `runHarness()` didn't pass `--vault` to the harness CLI, so
+  "Run Full Index" / "Compress Current Note" / "Detect Duplicate
+  Memory" / "Run Vault Diagnostics" hit the sample vault path from
+  `config.example.yml` instead of the user's own.
+- Voice-server captures emitted `type: voice-capture` only — no
+  `ralph_type` / `created` — so the validator failed against the
+  user's own inbox after the first capture. Added `ralph_type: memory`,
+  `memory_layer: raw`, `memory_temperature: hot`, kept
+  `type: voice-capture` as a more-specific subtype.
+- `harness compress` rewrote notes with only `compressed_from` /
+  `compressed_at`, stripping required fields. Now reads the original
+  frontmatter and preserves `ralph_type`, `created`, `memory_layer`,
+  `memory_temperature`, `tags`, `privacy` if present.
+
+Plus 5 regression tests across `test_round6.py`, `test_smoke.py`,
+`test_app.py`. Final test counts: **103 harness + 12 voice-server
+= 115 unit tests**, all green.
+
+---
+
 ## Audit (2026-05-09) — pre-Round 8 consolidation
 
 State of the tree:

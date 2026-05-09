@@ -197,3 +197,19 @@ jobs:
           bats prompts/ralph-meta-chain/tests/test_migration_dry_run.bats
           bats prompts/ralph-meta-chain/tests/test_frontmatter_validation.bats
           bats prompts/ralph-meta-chain/tests/test_round7_indexes_benchmarks.bats
+          bats prompts/ralph-meta-chain/tests/test_install_claude_code.bats
+          bats prompts/ralph-meta-chain/tests/test_install_codex.bats
+          bats prompts/ralph-meta-chain/tests/test_install_dispatcher.bats
+
+  mcp-server:
+    name: ralph-mcp-server (python stdio)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: py_compile
+        run: python -m py_compile prompts/ralph-meta-chain/mcp-server/ralph_mcp_server.py
+      - name: protocol smoke tests
+        run: python prompts/ralph-meta-chain/tests/test_mcp_server.py -v

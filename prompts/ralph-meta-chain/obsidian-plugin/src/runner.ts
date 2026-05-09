@@ -141,7 +141,9 @@ export async function runFullChain(s: RalphSettings, sink: LogSink): Promise<voi
 
 /**
  * Spawn `python -m harness <args>` once. Used for self-test, traces,
- * reflect, embed, etc.
+ * reflect, embed, etc. The plugin's auto-detected vaultRoot is passed
+ * as `--vault <path>` so harness commands operate on the open Obsidian
+ * vault, NOT on the sample path in config.example.yml.
  */
 export async function runHarness(
   s: RalphSettings,
@@ -151,6 +153,16 @@ export async function runHarness(
   if (!s.repoRoot) {
     sink("[ralph] runHarness: repoRoot not set");
     return -1;
+  }
+  // Inject --vault from the plugin's auto-detected vaultRoot. Without
+  // this, `python -m harness ...` falls back to config.yml (often
+  // missing) or config.example.yml's sample vault path — so commands
+  // like Run Full Index / Compress Current Note / Detect Duplicates /
+  // Run Vault Diagnostics operate on the wrong path despite the plugin
+  // knowing the right one.
+  const argsWithVault: string[] = [...args];
+  if (s.vaultRoot && !args.includes("--vault")) {
+    argsWithVault.unshift("--vault", s.vaultRoot);
   }
   return await new Promise<number>((resolve, reject) => {
     // Phase 1-6 reference layout: harness/ at repo root. Round 8
@@ -163,7 +175,7 @@ export async function runHarness(
       .catch(() => spawnHarness(oldPath));
 
     function spawnHarness(cwd: string) {
-      const child = spawn(s.pythonBin, ["-m", "harness", ...args], {
+      const child = spawn(s.pythonBin, ["-m", "harness", ...argsWithVault], {
         cwd,
         env: process.env,
         stdio: ["ignore", "pipe", "pipe"],

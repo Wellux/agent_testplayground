@@ -42,6 +42,11 @@ suggests the resolution path.
 
 ## Safety
 
+- **Writes** Markdown proposals to `migration/proposed-moves.md`,
+  `migration/rollback-plan.md`, `migration/conflicts.md` (if any),
+  and appends an audit line to `migration/migration-log.md`.
+  **Never moves files.** Revert with
+  `git restore prompts/ralph-meta-chain/migration/`.
 - The shell scripts honor their own gates: `apply` refuses six
   independent gates per `docs/APPROVAL_GATES.md` § Repo migration.
 - This command never invokes `--apply --confirmed`. Round 8's apply

@@ -143,9 +143,18 @@ def create_app() -> FastAPI:
                         detail=f"too many same-second captures at {ts}",
                     )
         capture_id = out.stem  # "voice-<ts>" or "voice-<ts>-N"
+        # Required by ralph_validate_frontmatter.sh: every Markdown file
+        # under $VAULT (excluding _archive/_processed/_rejected/_population/)
+        # must have `ralph_type` + `created`. Pre-fix the voice-server
+        # only emitted `type: voice-capture` (a more-specific subtype),
+        # so the FIRST voice capture made vault diagnostics fail on the
+        # user's own inbox.
         frontmatter = (
             f"---\n"
             f"id: {capture_id}\n"
+            f"ralph_type: memory\n"
+            f"memory_layer: raw\n"
+            f"memory_temperature: hot\n"
             f"type: voice-capture\n"
             f"source: {source}\n"
             f"used_whisper: {str(used_whisper).lower()}\n"

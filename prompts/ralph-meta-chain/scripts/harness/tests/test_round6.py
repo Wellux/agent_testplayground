@@ -121,19 +121,35 @@ class GreenfieldPluginPresent(unittest.TestCase):
         self.assertIn("$ARGUMENTS", runner_ts)
         self.assertIn("<promise>COMPLETE</promise>", runner_ts)
 
+    def test_runHarness_passes_vault_flag(self) -> None:
+        """Codex round-5 P2: Plugin's harness commands must pass
+        --vault s.vaultRoot. Otherwise harness falls back to
+        config.example.yml's sample vault path even when the plugin
+        has the right vault auto-detected."""
+        runner_ts = (PLUGIN_DIR / "src" / "runner.ts").read_text()
+        self.assertIn('"--vault"', runner_ts,
+                      "runHarness must inject --vault from s.vaultRoot")
+        # Specifically: the args splat must include argsWithVault, not raw args.
+        self.assertIn("argsWithVault", runner_ts,
+                      "spawn invocation must use argsWithVault, not raw args")
+
 
 class CommandsTemplates(unittest.TestCase):
     SLUGS = (
+        "ralph-cron",
         "ralph-memory",
         "ralph-skill",
         "ralph-experiment",
+        "ralph-research",
+        "ralph-compress",
+        "ralph-evolve",
         "ralph-autoheal",
         "ralph-autoupdate",
         "ralph-business-review",
         "ralph-migration-plan",
     )
 
-    def test_seven_command_files_present(self) -> None:
+    def test_all_command_files_present(self) -> None:
         existing = sorted(p.stem for p in COMMANDS_DIR.glob("*.md") if p.stem != "README")
         self.assertEqual(set(existing), set(self.SLUGS))
 

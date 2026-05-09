@@ -1,6 +1,18 @@
 {
-  "$comment": "Example Claude Code hook config. Merge into ~/.claude/settings.json under the top-level `hooks` key. Replace ~/.claude/hooks/ with whatever absolute path you copied the .sh files to.",
+  "$comment": "Example Claude Code hook config. Merge into ~/.claude/settings.json under the top-level `hooks` key. Replace ~/.claude/hooks/ with whatever absolute path you copied the .sh files to. install/install_claude_code.sh does the merge automatically and rewrites paths.",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/me/.claude/hooks/session-start.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

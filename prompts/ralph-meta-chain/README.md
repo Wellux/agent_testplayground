@@ -5,6 +5,12 @@ until the work is done. A **meta-chain** points that loop at the agent itself:
 each pass mines the day's traces, distills lessons into the Obsidian vault,
 and rewrites the prompts/skills/playbooks the next run will execute.
 
+> **New here?** Pick your coding agent and follow the quick-start:
+> [Claude Code (10 min)](docs/QUICKSTART_CLAUDE_CODE.md) ·
+> [Codex CLI (10 min)](docs/QUICKSTART_CODEX.md) ·
+> [PRD (15 min)](docs/PRD.md) ·
+> [Handoff (20 min)](docs/HANDOFF.md)
+
 Three drafts live in this folder. Run them once a day, in order, against the
 same vault.
 
@@ -88,6 +94,51 @@ If a folder is missing, the prompt creates it on first run.
 `crontab.example` shows a minimal setup using the Claude CLI. Each entry pipes
 the prompt file into a non-interactive Claude run with the vault path exported
 as `$VAULT`. Adjust the binary, model, and working directory for your setup.
+
+The canonical installer (`install/install_cron.sh`) writes the schedule for
+you on Linux (cron) or macOS (launchd) and seeds the vault from `seed/` +
+`vault-template/`.
+
+## Wiring as an interactive surface (Claude Code or Codex)
+
+Cron is *background*. To make the chain available *interactively* from inside
+your coding agent of choice, use the unified dispatcher:
+
+```bash
+# Single entry point — pick target(s) explicitly:
+prompts/ralph-meta-chain/install/install.sh --target all
+prompts/ralph-meta-chain/install/install.sh --target claude-code,codex
+prompts/ralph-meta-chain/install/install.sh --target codex --dry-run
+prompts/ralph-meta-chain/install/install.sh --target all --uninstall
+
+# Forward installer-specific flags after `--`:
+prompts/ralph-meta-chain/install/install.sh --target codex -- --without-mcp
+
+# Or call the per-target installers directly:
+prompts/ralph-meta-chain/install/install_claude_code.sh
+prompts/ralph-meta-chain/install/install_codex.sh
+prompts/ralph-meta-chain/install/install_cron.sh
+```
+
+Both wire the same conceptual surface (slash commands, skills, MCP server,
+auto-loaded briefing) into the conventions each agent expects:
+
+| Surface             | Claude Code                         | Codex                                       |
+| ------------------- | ----------------------------------- | ------------------------------------------- |
+| Slash commands      | `~/.claude/commands/ralph-*.md`     | `~/.codex/prompts/ralph-*.md` (deprecated)  |
+| Specialist skills   | `~/.claude/skills/<slug>/SKILL.md`  | `~/.agents/skills/<slug>/SKILL.md`          |
+| Axis subagents      | `~/.claude/agents/ralph-*.md`       | `~/.agents/skills/ralph-*/SKILL.md` (folded into skills) |
+| Lifecycle hooks     | `~/.claude/hooks/*.sh`              | _(none — Codex has no hook surface)_         |
+| MCP server          | `~/.claude/.mcp.json` (JSON)        | `~/.codex/config.toml` (TOML)               |
+| Auto-loaded briefing| `CLAUDE.md` (cwd-up)                | `AGENTS.md` (cwd-up)                        |
+
+Both installers are **idempotent**, refuse to clobber non-symlink files,
+honour `--scope user|project|vault`, and ship symmetric `--uninstall`.
+The shared `mcp-server/` is the same Python module — Claude Code calls it
+via JSON config, Codex via TOML config; both speak the same MCP protocol.
+
+See `install/CLAUDE_CODE_INSTALL.md` and `install/CODEX_INSTALL.md` for
+the full surface maps.
 
 ## Ralph guarantees baked into every prompt
 
