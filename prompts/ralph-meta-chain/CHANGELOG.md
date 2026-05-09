@@ -16,6 +16,86 @@ phased rebuild plan.
 
 ---
 
+## Round 10 (2026-05-09) — Codex surface (shipped)
+
+The chain becomes **executable from inside the OpenAI Codex CLI** too,
+mirroring the Round 9 Claude Code install. The shared MCP server now
+serves both agents (JSON config for Claude Code, TOML config for Codex).
+
+### What landed
+
+- **`install/install_codex.sh`** — Codex installer. `--scope user|project|vault`,
+  `--dry-run`, `--uninstall`, `--with-mcp`/`--without-mcp`,
+  `--without-prompts`. Idempotent; refuses to clobber; tracks every
+  artefact in `<target>/.codex/.ralph-installed.json`.
+- **`install/uninstall_codex.sh`** — symmetric uninstaller. Strips the
+  `[mcp_servers.ralph]` block from `~/.codex/config.toml` (preserves
+  user-added blocks byte-for-byte).
+- **`install/AGENTS.template.md`** — Codex's auto-loaded briefing
+  (equivalent of `CLAUDE.md`). Marker-tagged so the uninstaller can
+  tell user-edited copies apart from RALPH-managed ones.
+- **`install/CODEX_INSTALL.md`** — user-facing install guide with
+  surface map, troubleshooting, coexistence notes.
+
+### Surface mapping (Claude Code → Codex)
+
+| Claude Code              | Codex equivalent              | Notes                                |
+| ------------------------ | ----------------------------- | ------------------------------------ |
+| `~/.claude/commands/`    | `~/.codex/prompts/`           | works; deprecated upstream            |
+| `~/.claude/agents/`      | folded into `.agents/skills/` | Codex has no Agent-tool subagents    |
+| `~/.claude/skills/`      | `~/.agents/skills/`           | direct mirror; same SKILL.md format  |
+| `~/.claude/hooks/`       | _(none)_                      | Codex has no lifecycle hooks         |
+| `~/.claude/.mcp.json`    | `~/.codex/config.toml`        | same MCP server; different format    |
+| `CLAUDE.md`              | `AGENTS.md`                   | both auto-load from cwd-up           |
+
+### What gets deployed
+
+- **8 specialist skills** symlinked from `skills/<slug>/` →
+  `<skills_root>/<slug>/`.
+- **8 axis subagents** wrapped in skill directories (one
+  `<axis>/SKILL.md` per axis, symlinked to `agents/ralph-<axis>.md`).
+- **11 slash-command prompts** symlinked from `commands/*.md` →
+  `~/.codex/prompts/*.md` (skip with `--without-prompts`).
+- **`[mcp_servers.ralph]` block** appended to `~/.codex/config.toml`
+  via text-merge that preserves all user content.
+- **AGENTS.md briefing** copied to `<briefing_dir>/AGENTS.md` (only
+  if not already present; never clobbers).
+
+### Tests
+
+- **`tests/test_install_codex.bats`** — 18 cases covering every
+  install/uninstall path, including:
+  - dry-run / wet / idempotent / clobber-refusal
+  - TOML round-trip with pre-existing user content preserved
+  - AGENTS.md marker handling (user-edited copies left alone)
+  - `--without-mcp` / `--without-prompts` / `--scope project` paths
+  - second-install AGENTS.md tracking (regression for the bug found
+    during dev where user-kept files weren't re-tracked).
+- CI's `bats` job extended with the Codex installer suite.
+
+### Coexistence
+
+Both installers can run independently and idempotently — they write
+to disjoint paths. The shared `mcp-server/` is referenced by both;
+re-installing one doesn't disturb the other.
+
+### Verify
+
+```bash
+# Install both surfaces (or pick one)
+prompts/ralph-meta-chain/install/install_claude_code.sh
+prompts/ralph-meta-chain/install/install_codex.sh
+
+# Then in a Codex session — implicit skill matching:
+> "Promote the inbox notes from yesterday."
+# Codex routes to ralph-memory skill via description match.
+
+# Or explicitly:
+> /ralph-cron
+```
+
+---
+
 ## Round 9 (2026-05-09) — Claude Code surface (shipped)
 
 The chain becomes **executable from inside Claude Code** — interactive

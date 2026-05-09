@@ -93,28 +93,38 @@ The canonical installer (`install/install_cron.sh`) writes the schedule for
 you on Linux (cron) or macOS (launchd) and seeds the vault from `seed/` +
 `vault-template/`.
 
-## Wiring as a Claude Code surface (interactive)
+## Wiring as an interactive surface (Claude Code or Codex)
 
 Cron is *background*. To make the chain available *interactively* from inside
-Claude Code (slash commands, subagents, hooks, MCP tools), run:
+your coding agent of choice, run the matching installer:
 
 ```bash
+# Claude Code
 prompts/ralph-meta-chain/install/install_claude_code.sh
+
+# OpenAI Codex CLI
+prompts/ralph-meta-chain/install/install_codex.sh
 ```
 
-This wires:
+Both wire the same conceptual surface (slash commands, skills, MCP server,
+auto-loaded briefing) into the conventions each agent expects:
 
-- **11 slash commands** (`/ralph-cron` master + per-axis dashboards)
-- **8 axis subagents** in `agents/` (delegated specialists)
-- **8 specialist skills** in `skills/`
-- **5 lifecycle hooks** (SessionStart, PreToolUse, PostToolUse, Stop, Notification)
-- **Permissions allowlist** + deny-list, set-union'd into your settings.json
-- **`ralph` MCP server** exposing 4 read-only tools (`ralph_query`,
-  `ralph_axis_status`, `ralph_self_test`, `ralph_migration_dry_run`)
+| Surface             | Claude Code                         | Codex                                       |
+| ------------------- | ----------------------------------- | ------------------------------------------- |
+| Slash commands      | `~/.claude/commands/ralph-*.md`     | `~/.codex/prompts/ralph-*.md` (deprecated)  |
+| Specialist skills   | `~/.claude/skills/<slug>/SKILL.md`  | `~/.agents/skills/<slug>/SKILL.md`          |
+| Axis subagents      | `~/.claude/agents/ralph-*.md`       | `~/.agents/skills/ralph-*/SKILL.md` (folded into skills) |
+| Lifecycle hooks     | `~/.claude/hooks/*.sh`              | _(none — Codex has no hook surface)_         |
+| MCP server          | `~/.claude/.mcp.json` (JSON)        | `~/.codex/config.toml` (TOML)               |
+| Auto-loaded briefing| `CLAUDE.md` (cwd-up)                | `AGENTS.md` (cwd-up)                        |
 
-Honours `--scope user|project|vault`, is idempotent, refuses to clobber, and
-ships a clean `--uninstall`. See `install/CLAUDE_CODE_INSTALL.md` for the
-full surface map.
+Both installers are **idempotent**, refuse to clobber non-symlink files,
+honour `--scope user|project|vault`, and ship symmetric `--uninstall`.
+The shared `mcp-server/` is the same Python module — Claude Code calls it
+via JSON config, Codex via TOML config; both speak the same MCP protocol.
+
+See `install/CLAUDE_CODE_INSTALL.md` and `install/CODEX_INSTALL.md` for
+the full surface maps.
 
 ## Ralph guarantees baked into every prompt
 
