@@ -108,5 +108,47 @@ class ConfigLoader(unittest.TestCase):
         self.assertIn("budgets", cfg)
 
 
+class MemoryBackends(unittest.TestCase):
+    """The default selector returns None (current code path); explicit
+    cognee/letta selections should error cleanly when packages are absent."""
+
+    def test_default_returns_none(self) -> None:
+        from harness.memory_backends import select_backend
+        self.assertIsNone(select_backend("", vault=pathlib.Path("/tmp"), model="x"))
+        self.assertIsNone(select_backend("local-sqlite-vec", vault=pathlib.Path("/tmp"), model="x"))
+
+    def test_unknown_backend_raises(self) -> None:
+        from harness.memory_backends import select_backend
+        with self.assertRaises(ValueError):
+            select_backend("not-a-backend", vault=pathlib.Path("/tmp"), model="x")
+
+    def test_cognee_missing_pkg_errors(self) -> None:
+        # cognee is not in the harness deps; picking it should fail clearly.
+        from harness.memory_backends import select_backend
+        with self.assertRaises(RuntimeError):
+            select_backend("cognee", vault=pathlib.Path("/tmp"), model="x")
+
+
+class CreatorRender(unittest.TestCase):
+    def test_render_creators_groups_by_handle(self) -> None:
+        from harness.ingest import _render_creators
+        items = [
+            {"channel": "AlexFinnOfficial", "title": "Claude Code in 25 min",
+             "url": "https://www.youtube.com/watch?v=aaa", "published": "2026-04-15T12:00:00+00:00"},
+            {"channel": "mreflow", "title": "AI news",
+             "url": "https://www.youtube.com/watch?v=bbb", "published": "2026-04-15T13:00:00+00:00"},
+            {"channel": "AlexFinnOfficial", "title": "Vibe coding 101",
+             "url": "https://www.youtube.com/watch?v=ccc", "published": "2026-04-16T12:00:00+00:00"},
+        ]
+        out = _render_creators("2026-05-09", items)
+        self.assertTrue(out.startswith("---\n"))
+        self.assertIn("type: research", out)
+        self.assertIn("source: youtube-creators", out)
+        self.assertIn("## @AlexFinnOfficial", out)
+        self.assertIn("## @mreflow", out)
+        self.assertIn("Claude Code in 25 min", out)
+        self.assertIn("Vibe coding 101", out)
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

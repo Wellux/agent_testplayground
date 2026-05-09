@@ -14,6 +14,7 @@ from typing import Any
 import httpx
 
 from . import load_config, resolve_vault
+from .memory_backends import select_backend
 
 log = logging.getLogger(__name__)
 
@@ -132,6 +133,12 @@ def _open(config_path: str | None, vault_override: str | None) -> tuple[pathlib.
     return vault, conn, base_url, model
 
 
+def _resolve_backend(cfg: dict[str, Any], vault: pathlib.Path, model: str):
+    em = cfg.get("embeddings", {}) or {}
+    backend_name = os.environ.get("RALPH_MEM_BACKEND") or em.get("backend")
+    return select_backend(backend_name or "", vault=vault, model=model)
+
+
 def run_embed(
     *,
     note: str | None,
@@ -141,6 +148,7 @@ def run_embed(
     config_path: str | None,
 ) -> int:
     vault, conn, base_url, model = _open(config_path, vault_override)
+    backend = _resolve_backend(load_config(config_path), vault, model)
 
     paths: list[pathlib.Path]
     if note:
@@ -156,11 +164,14 @@ def run_embed(
             log.warning("skip missing %s", p)
             continue
         try:
-            _embed_one(conn, p, vault, base_url, model)
+            if backend is not None:
+                backend.embed_one(p, vault)  # type: ignore[attr-defined]
+            else:
+                _embed_one(conn, p, vault, base_url, model)
             n += 1
         except Exception as e:
             log.warning("embed failed for %s: %s", p, e)
-    log.info("embedded %d note(s)", n)
+    log.info("embedded %d note(s) (backend=%s)", n, getattr(backend, "name", "local-sqlite-vec"))
     return 0 if n > 0 or note is None else 1
 
 

@@ -23,6 +23,28 @@ deprecate, rewrite-from-scratch, or split a skill if the metrics say so.
   optimization. Population A/B in prompt #2 was the day-scale variant; here
   we run a week-scale GEPA pass that can spawn entirely new candidate
   populations.
+- **gepa-ai/gepa** — Genetic-Pareto reflective prompt evolution; ICLR 2026
+  Oral. We borrow **MAP-Elites** explicitly: every candidate is binned by
+  `(token-cost-bucket, format-strictness-bucket)`; we keep the best per bin,
+  not just global best, so niche prompts (e.g. terse-but-format-strict) survive.
+  https://github.com/gepa-ai/gepa
+- **Reflexion (Shinn et al.)** — runtime self-critique. A candidate prompt
+  produces an output → a Reflexion-style critic re-reads its own output
+  against the rubric → drafts a one-sentence "lesson learned" → appends to
+  the candidate's frontmatter. Over weeks the candidate accumulates lessons.
+- **ADAS (Automated Design of Agentic Systems)** — meta-agents programming
+  better agents in code. We don't auto-edit code yet, but we DO open
+  `evolve-proposal` notes that include code diffs the user can apply.
+- **OpenEvolve** — open-source AlphaEvolve-style MAP-Elites + cascade
+  evaluator. https://github.com/openevolve/openevolve (or the community fork
+  the user pinned in `config.yml`).
+- **EvoAgentX/Awesome-Self-Evolving-Agents** — survey + curated list. Keep
+  this URL in 08-autoupdate's release-feed list so we surface new entries.
+  https://github.com/EvoAgentX/Awesome-Self-Evolving-Agents
+- **OpenAI Cookbook — Self-Evolving Agents** — autonomous-retraining recipe;
+  we mirror its loop (collect-traces → score → select → retrain) but at the
+  prompt/skill level, not weight level.
+  https://cookbook.openai.com/examples/partners/self_evolving_agents/autonomous_agent_retraining
 - **Karpathy LLM Wiki gist** — *lint*: contradictions, stale claims, orphans.
   We extend: the LINT here is metric-driven, not link-driven.
 - **ralph-wiggum** exit contract.
@@ -77,13 +99,30 @@ For each axis read the last 14d slice of `metrics.ndjson`:
 | MOC has > 50 backlinks (saturated)                         | propose **split** into N sub-MOCs by sub-tag             |
 | atomic note has > 30 inbound links                         | propose extracting to a permanent note + redirect stub   |
 
-## Step 3 — Population spawn (GEPA-flavored)
+## Step 3 — Population spawn (GEPA × MAP-Elites × Reflexion)
 
 For each "rewrite-from-scratch" proposal, spawn 3 candidate variants in
 `50-Prompts/<name>.candidate-N.md`. Each variant explores a different
-direction (e.g. brevity-max, format-strict, persona-shift). Stage them; the
-weekly Monday `interaction` pass (#3) will A/B them via `harness ab` and the
-Wednesday-after will keep the survivor.
+*evolutionary axis* (brevity-max, format-strict, persona-shift). Stage
+them; the daily `interaction` pass (#3) will A/B them via `harness ab`.
+
+**MAP-Elites bins**: tag each candidate's frontmatter with a `bin: "<axis>"`
+field (e.g. `terse-strict`, `verbose-loose`). The interaction pass keeps
+the per-bin survivor in `50-Prompts/_population/<name>/<bin>.md`, not
+just the global best — diversity preserves combinatorial reuse.
+
+**Reflexion lesson-loop**: after each A/B run, append a one-line
+`reflection:` field to the candidate's frontmatter that the LLM judge
+generates from the verdict. Format:
+
+```yaml
+reflections:
+  - "[2026-05-09] preamble killed terse rubric (-0.4)"
+  - "[2026-05-12] missing format header dropped score (-0.3)"
+```
+
+A candidate that has accumulated three reflections of the same flavor
+gets a free re-rewrite next pass.
 
 ## Step 4 — Coverage gaps (Alex Finn "what's missing?" lens)
 

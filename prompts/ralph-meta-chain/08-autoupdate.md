@@ -43,21 +43,59 @@ proposes dependency bumps, and surfaces noteworthy launches as inbox items.
 For each tool the chain depends on, fetch the latest release tag + notes.
 Use **GitHub releases** where possible.
 
+### Coding harnesses (2026 landscape — Claude Code remains primary)
+
 | Tool                         | Source                                                                  |
 | ---------------------------- | ----------------------------------------------------------------------- |
 | Claude Code CLI              | GitHub releases for `anthropics/claude-code`                            |
 | Anthropic Python SDK         | PyPI `anthropic` JSON                                                   |
 | Anthropic ralph-wiggum plugin| `anthropics/claude-code/plugins/ralph-wiggum/CHANGELOG.md` (if present) |
+| Codex CLI                    | `openai/codex` releases                                                 |
+| Cursor (3.x in 2026)         | https://www.cursor.com/changelog                                        |
+| Aider                        | `paul-gauthier/aider` releases                                          |
+| Cline                        | `cline/cline` releases                                                  |
+| Roo Code                     | `RooCodeInc/Roo-Code` releases                                          |
+| Continue                     | `continuedev/continue` releases                                         |
+| Goose                        | `block/goose` releases                                                  |
+
+### Memory / agent frameworks (2026)
+
+| Tool                         | Source                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------- |
 | Hermes Agent                 | `NousResearch/hermes-agent` releases                                    |
 | Hermes self-evolution        | `NousResearch/hermes-agent-self-evolution` releases                     |
+| Letta (MemGPT)               | `letta-ai/letta` releases                                               |
+| Cognee                       | `cognee-ai/cognee` releases                                             |
+| Mem0                         | `mem0ai/mem0` releases                                                  |
+| Zep                          | `getzep/zep` releases                                                   |
+| GEPA                         | `gepa-ai/gepa` releases (ICLR 2026 Oral)                                |
+| OpenEvolve                   | community fork the user pinned in config.yml                            |
+| EvoAgentX self-evolving list | `EvoAgentX/Awesome-Self-Evolving-Agents`                                |
+| DSPy                         | `stanfordnlp/dspy` releases                                             |
+
+### Storage + UX
+
+| Tool                         | Source                                                                  |
+| ---------------------------- | ----------------------------------------------------------------------- |
 | sqlite-vec                   | `asg017/sqlite-vec` releases                                            |
 | Ollama                       | `ollama/ollama` releases                                                |
 | nomic-embed-text             | Ollama model registry                                                   |
 | obsidian-smart-connections   | `brianpetro/obsidian-smart-connections` releases                        |
 | obra/knowledge-graph         | releases                                                                |
 | OpenClaude / OpenClaw / ClaudeClaw | as the user pinned in config.yml                                  |
-| Codex CLI                    | `openai/codex` releases                                                 |
-| n8n (for context with Nate Herk's workflows) | `n8n-io/n8n` releases                                   |
+| n8n (for Nate Herk parity)   | `n8n-io/n8n` releases                                                   |
+
+### Creator channels (Matt Wolfe weekly lens)
+
+YouTube provides per-channel RSS at
+`https://www.youtube.com/feeds/videos.xml?channel_id=<UC...>`. The harness
+calls `harness ingest --creators` to pull the last 7 days from each.
+
+| Channel                                   | RSS                                                       |
+| ----------------------------------------- | --------------------------------------------------------- |
+| Alex Finn (`@AlexFinnOfficial`)           | resolved at runtime from channel handle                   |
+| Matt Wolfe (`@mreflow`)                   | resolved at runtime from channel handle                   |
+| Nate Herk (`@nateherk`)                   | resolved at runtime from channel handle                   |
 
 `Bash` (delegate to harness when convenient):
 

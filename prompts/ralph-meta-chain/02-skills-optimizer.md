@@ -21,6 +21,19 @@ skills, and re-validates stale skills against their canonical experiments.
 - **NousResearch/hermes-agent-self-evolution** — DSPy + GEPA evolutionary
   optimization. We borrow the **population-A/B** idea: when amending a stale
   skill, generate 3 candidate variants and let `harness ab` keep the best.
+- **Voyager (Wang et al.)** — *embodied lifelong learning*; agent accumulates
+  a transferable skill library while the model stays frozen. We adopt the
+  **skill-curriculum** rule: when proposing new skills this pass, sort by
+  prerequisite depth (simple → complex) and require an `is_prerequisite_of:`
+  chain so later skills can reuse earlier ones.
+- **EvoAgentX/Awesome-Self-Evolving-Agents** — survey of the field; lists
+  Voyager, Reflexion, ADAS, OpenEvolve, GEPA, ShinkaEvolve.
+  https://github.com/EvoAgentX/Awesome-Self-Evolving-Agents
+- **gepa-ai/gepa** — Genetic-Pareto reflective prompt evolution; ICLR 2026
+  Oral; Databricks reported 90× cost reduction. We borrow **MAP-Elites
+  diversity** for the population A/B in step 4 (keep the best per
+  fitness-bin, not just global best).
+  https://github.com/gepa-ai/gepa
 - **0xNyk/awesome-hermes-agent** — community skill registry; mirror its
   per-skill README structure for `40-Skills/<slug>.md`.
 - **Anthropic claude-code skills system** — `.claude/skills/<name>.md` with a
@@ -113,24 +126,43 @@ Replay the most recent matching invocation in a scratch worktree; assert
 exit 0 and PR URL parsable. Time-cap: `ralph.experiment_minutes`.
 ```
 
-## Step 4 — Amend stale skills (Hermes-style population A/B)
+## Step 4 — Amend stale skills (Hermes population × GEPA MAP-Elites)
 
 For each skill whose `last_validated` is > 14d old (capped at
 `budgets.skills.max_amended`):
 
 1. Re-run its **canonical experiment** within `ralph.experiment_minutes`.
-2. **GEPA-style population**: generate 3 candidate edits (e.g. tighter
-   trigger phrases, shortened steps, added failure mode). Stage each at
-   `40-Skills/<slug>.candidate-N.md`.
+2. **GEPA-style population**: generate 3 candidate edits along *different*
+   evolutionary axes (one tightens trigger phrases, one shortens steps, one
+   adds a failure mode). Stage each at `40-Skills/<slug>.candidate-N.md`.
 3. `Bash`: `harness ab --incumbent 40-Skills/<slug>.md --candidate
    40-Skills/<slug>.candidate-N.md --fixture <skill-canonical-fixture>` for
    each candidate. The harness writes 2 metrics lines per call.
-4. Keep the winner (per the harness's exit code: 0 = candidate wins);
-   archive losers to `40-Skills/_rejected/<slug>-<date>.md`.
-5. `Edit` the surviving skill file: bump `last_validated`, refresh `metrics`,
+4. **MAP-Elites bin**: pick the winner *per fitness bin* (token-cost ×
+   format-strictness), not just global best. Keep up to one survivor per
+   bin in `40-Skills/_population/<slug>/`. This preserves diversity so a
+   later combinatorial step (Voyager-style) can reuse niche variants.
+5. Promote the most-recent global-best candidate to incumbent. Archive
+   the rest under `40-Skills/_rejected/<slug>-<date>.md` (never `rm`).
+6. `Edit` the surviving skill file: bump `last_validated`, refresh `metrics`,
    and append a `## Ralph YYYY-MM-DD` section recording the result. If
    refuted twice in a row, set `status: deprecated` (still never delete).
-6. `Bash`: `harness embed --note 40-Skills/<slug>.md` to refresh embeddings.
+7. `Bash`: `harness embed --note 40-Skills/<slug>.md` to refresh embeddings.
+
+## Step 4½ — New-skill curriculum (Voyager)
+
+When this pass would create more than one new skill, sort the candidate
+slate by **prerequisite depth**: a skill with `is_prerequisite_of: [other]`
+must land before any skill that lists it. Add the chain to the new skill's
+frontmatter explicitly:
+
+```yaml
+prerequisites: [recall, gh-pr-from-branch]
+is_prerequisite_of: [release-notes]
+```
+
+This builds a curriculum the agent can rely on instead of re-deriving
+foundations every pass.
 
 ## Step 5 — Cross-link
 

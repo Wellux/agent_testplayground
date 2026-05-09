@@ -39,11 +39,18 @@ trailing_window_days: 7
 dry_run: false
 
 # Embeddings — local-first via Ollama (no external embedding endpoint by default)
+# Memory backend selection (2026 landscape):
+#   local-sqlite-vec   default — sqlite-vec + FTS5, obra/knowledge-graph schema
+#   cognee             local-first graph reasoning over unstructured docs (cognee-ai/cognee)
+#   letta              OS-style tiered memory for long-running agents (letta-ai/letta)
+# Source comparison: Atlan / vectorize.io / n1n.ai 2026 surveys; LongMemEval shows
+# Zep at 63.8% vs Mem0 49.0%, Letta wins for multi-day agents, Cognee for local graph.
 embeddings:
+  backend:  local-sqlite-vec          # local-sqlite-vec | cognee | letta
   provider: ollama
   base_url: http://localhost:11434
   model:    nomic-embed-text          # 768 dims; replace with your favourite local model
-  db_path:  90-Meta/embeddings.db     # sqlite-vec + FTS5, obra/knowledge-graph schema
+  db_path:  90-Meta/embeddings.db     # only used by local-sqlite-vec
   reindex_on_startup: false
 
 # Research ingest topics for prompt #04 — extend freely.

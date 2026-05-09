@@ -37,8 +37,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_q.add_argument("--k", type=int, default=10)
 
     p_in = sub.add_parser("ingest", help="GitHub trending → 00-Inbox/")
-    p_in.add_argument("--topics", required=True, help="comma-separated topic list")
+    p_in.add_argument("--topics", help="comma-separated topic list (mutually exclusive with --creators)")
     p_in.add_argument("--max-repos", type=int, default=30)
+    p_in.add_argument("--creators", help="comma-separated YouTube @handles (Matt Wolfe weekly lens)")
+    p_in.add_argument("--max-per-channel", type=int, default=5)
     p_in.add_argument("--out", required=True, help="output path under $VAULT")
 
     p_c = sub.add_parser("compress", help="Summarize bloated notes / weekly rollups")
@@ -83,6 +85,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             config_path=args.config,
         )
     if args.cmd == "ingest":
+        if args.creators:
+            return ingest_mod.run_creators(
+                handles=args.creators,
+                max_per_channel=args.max_per_channel,
+                out=args.out,
+                vault_override=args.vault,
+                config_path=args.config,
+            )
+        if not args.topics:
+            print("ingest: pass --topics or --creators", flush=True)
+            return 64
         return ingest_mod.run(
             topics=args.topics,
             max_repos=args.max_repos,

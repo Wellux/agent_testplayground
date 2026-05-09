@@ -24,6 +24,15 @@ _REPO_RE = re.compile(
 _DESC_RE = re.compile(r'<p[^>]*class="[^"]*col-9[^"]*"[^>]*>\s*(?P<desc>.*?)</p>', re.S)
 _STARS_RE = re.compile(r'(\d[\d,]*)\s*stars\s*today', re.I)
 
+# YouTube channel RSS — no API key needed.
+YT_CHANNEL_RSS = "https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
+YT_HANDLE_HTML = "https://www.youtube.com/@{handle}"
+_CHANNEL_ID_RE = re.compile(r'"channelId":"(UC[A-Za-z0-9_-]{20,})"')
+_YT_ENTRY_RE = re.compile(
+    r"<entry>.*?<title>(?P<title>.*?)</title>.*?<link[^>]*href=\"(?P<link>[^\"]+)\".*?<published>(?P<published>[^<]+)</published>",
+    re.S,
+)
+
 
 def _scrape_topic(topic: str, *, max_repos: int, timeout: float = 30.0) -> list[dict]:
     url = TRENDING_URL.format(topic=topic.strip())
@@ -142,4 +151,99 @@ def run(
     body = _render(date, topic_list, all_rows, seen)
     out_path.write_text(body, encoding="utf8")
     log.info("wrote %s (%d repos)", out_path, len(all_rows))
+    return 0
+
+
+def _resolve_channel_id(handle: str, *, timeout: float = 15.0) -> str | None:
+    """Translate `@handle` → `UC...` channel id by scraping the channel page.
+    YouTube no longer publishes a public handle→id endpoint, but the
+    rendered HTML still embeds the canonical channelId."""
+    handle = handle.lstrip("@")
+    try:
+        r = httpx.get(YT_HANDLE_HTML.format(handle=handle), timeout=timeout, headers={"User-Agent": UA})
+        r.raise_for_status()
+    except httpx.HTTPError as e:
+        log.warning("yt handle resolve failed for %s: %s", handle, e)
+        return None
+    m = _CHANNEL_ID_RE.search(r.text)
+    return m.group(1) if m else None
+
+
+def _fetch_channel(handle: str, *, max_items: int = 5, timeout: float = 15.0) -> list[dict]:
+    cid = _resolve_channel_id(handle)
+    if not cid:
+        return []
+    try:
+        r = httpx.get(YT_CHANNEL_RSS.format(channel_id=cid), timeout=timeout, headers={"User-Agent": UA})
+        r.raise_for_status()
+    except httpx.HTTPError as e:
+        log.warning("yt rss failed for %s (%s): %s", handle, cid, e)
+        return []
+    items: list[dict] = []
+    for m in _YT_ENTRY_RE.finditer(r.text):
+        items.append({
+            "channel": handle,
+            "title": m.group("title").strip(),
+            "url": m.group("link").strip(),
+            "published": m.group("published").strip(),
+        })
+        if len(items) >= max_items:
+            break
+    return items
+
+
+def _render_creators(date: str, items: list[dict]) -> str:
+    lines: list[str] = []
+    lines.append("---")
+    lines.append(f"id: {date.replace('-', '')}-creators")
+    lines.append("type: research")
+    lines.append(f"created: {date}")
+    lines.append("source: youtube-creators")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"# Creator videos — {date}")
+    lines.append("")
+    by_channel: dict[str, list[dict]] = {}
+    for it in items:
+        by_channel.setdefault(it["channel"], []).append(it)
+    for ch, vids in by_channel.items():
+        lines.append(f"## @{ch}")
+        for v in vids:
+            lines.append(f"- [{v['title']}]({v['url']}) — {v['published'][:10]}")
+            lines.append(f"  - Tags: [#trending, #creator, #{ch.lower()}]")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def run_creators(
+    *,
+    handles: str,
+    max_per_channel: int,
+    out: str,
+    vault_override: str | None,
+    config_path: str | None,
+) -> int:
+    """Pull last-N videos from each YouTube channel handle."""
+    cfg = load_config(config_path)
+    vault = resolve_vault(vault_override, cfg)
+    handle_list = [h.strip().lstrip("@") for h in handles.split(",") if h.strip()]
+    if not handle_list:
+        log.error("no creator handles provided")
+        return 64
+
+    out_path = pathlib.Path(out)
+    if not out_path.is_absolute():
+        out_path = vault / out_path
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    items: list[dict] = []
+    for h in handle_list:
+        rows = _fetch_channel(h, max_items=max_per_channel)
+        log.info("creator=%s items=%d", h, len(rows))
+        items.extend(rows)
+        time.sleep(0.5)
+
+    date = _dt.date.today().isoformat()
+    out_path.write_text(_render_creators(date, items), encoding="utf8")
+    log.info("wrote %s (%d items across %d channels)", out_path, len(items), len(handle_list))
     return 0
