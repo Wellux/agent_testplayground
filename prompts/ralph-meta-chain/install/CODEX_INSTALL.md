@@ -106,18 +106,20 @@ want them — the skills are sufficient for the same workflows.
 
 ### 3. MCP tools (programmatic, from inside Codex's reasoning)
 
-Four read-only tools. Codex will call them when the user's question
-matches the tool's `description`:
+Four tools. Codex will call them when the user's question matches the
+tool's `description`:
 
 ```
-ralph_query                 semantic search of the vault
-ralph_axis_status           last log line for one or all axes
-ralph_self_test             run the local CI mirror
-ralph_migration_dry_run     preview a vault migration
+ralph_query                 semantic search of the vault                  (read-only)
+ralph_axis_status           last log line for one or all axes              (read-only)
+ralph_self_test             run the local CI mirror                         (read-only)
+ralph_migration_dry_run     generate migration proposal Markdown           (writes proposals; never moves files)
 ```
 
-These hit the same `harness` CLI that Claude Code uses. Implementation
-in `mcp-server/README.md`.
+The first three are strictly read-only. `ralph_migration_dry_run`
+writes proposal Markdown to `migration/`; revert with
+`git restore prompts/ralph-meta-chain/migration/`. Implementation in
+`mcp-server/README.md`.
 
 ## Uninstall
 

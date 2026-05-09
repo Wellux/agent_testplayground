@@ -108,17 +108,24 @@ canonical prompt in its own context window.
 
 ### 3. MCP tools (programmatic, from inside Claude's reasoning)
 
-Four read-only tools the model can call without a Bash shell:
+Four tools the model can call without a Bash shell:
 
 ```
-ralph_query                semantic search of the vault
-ralph_axis_status          last log line for one or all axes
-ralph_self_test            run the local CI mirror
-ralph_migration_dry_run    preview a vault migration
+ralph_query                semantic search of the vault                   (read-only)
+ralph_axis_status          last log line for one or all axes               (read-only)
+ralph_self_test            run the local CI mirror                          (read-only)
+ralph_migration_dry_run    generate migration proposal Markdown            (writes proposals; never moves files)
 ```
 
-These hit the `harness` CLI under the hood. The MCP server is
-documented in `mcp-server/README.md`.
+The first three are strictly read-only. `ralph_migration_dry_run`
+writes proposal Markdown into `migration/` (proposed-moves.md,
+rollback-plan.md, conflicts.md if any) but never moves files — the
+proposals ARE the artefact. Revert with
+`git restore prompts/ralph-meta-chain/migration/`. The tool's MCP
+description surfaces this to the LLM client.
+
+These hit the `harness` CLI / `migration/scripts/` under the hood.
+The MCP server is documented in `mcp-server/README.md`.
 
 ## Hooks installed
 

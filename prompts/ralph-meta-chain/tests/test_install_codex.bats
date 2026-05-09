@@ -94,6 +94,51 @@ print('OK')
   [ "$count" = "1" ]
 }
 
+@test "TOML merge replaces unmarked pre-existing [mcp_servers.ralph] (no duplicate table)" {
+  # Regression for Codex P2 review: a user with a manually-set or
+  # older-installer [mcp_servers.ralph] block (no marker comment)
+  # would otherwise see TWO [mcp_servers.ralph] tables after our
+  # merge, which is invalid TOML.
+  mkdir -p "$CODEX_HOME"
+  cat > "$CODEX_HOME/config.toml" <<'EOF'
+model = "gpt-5"
+
+[mcp_servers.ralph]
+command = "old-binary"
+args = ["--legacy"]
+
+[mcp_servers.ralph.env]
+OLD_VAR = "1"
+
+[mcp_servers.fileSystem]
+command = "node"
+EOF
+  run "$INSTALLER"
+  [ "$status" -eq 0 ]
+  # Exactly one [mcp_servers.ralph] block (count by exact match).
+  count="$(grep -c '^\[mcp_servers\.ralph\]$' "$CODEX_HOME/config.toml")"
+  [ "$count" = "1" ]
+  # And the resulting file MUST parse as valid TOML.
+  run python3 -c "
+import tomllib
+d = tomllib.load(open('$CODEX_HOME/config.toml','rb'))
+ralph = d['mcp_servers']['ralph']
+# Our values won — old-binary / --legacy are gone.
+assert ralph['command'] == 'python3'
+assert ralph['args'] == ['-m', 'ralph_mcp_server']
+# OLD_VAR is gone too (was inside the bare ralph.env sub-table we stripped).
+assert 'OLD_VAR' not in ralph.get('env', {})
+# fileSystem is preserved.
+assert 'fileSystem' in d['mcp_servers']
+# User-level keys preserved.
+assert d['model'] == 'gpt-5'
+"
+  [ "$status" -eq 0 ]
+  # The installer should announce the replacement.
+  run "$INSTALLER"  # second run: now marker-tagged so the announce won't fire again
+  [ "$status" -eq 0 ]
+}
+
 @test "TOML merge preserves pre-existing user content" {
   mkdir -p "$CODEX_HOME"
   cat > "$CODEX_HOME/config.toml" <<'EOF'

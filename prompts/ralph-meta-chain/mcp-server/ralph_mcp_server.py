@@ -117,8 +117,13 @@ TOOLS: list[dict[str, Any]] = [
     {
         "name": "ralph_migration_dry_run",
         "description": (
-            "Preview the next migration pass without writing anything. "
-            "Returns proposed moves + conflict count."
+            "Generate the next migration proposal. NEVER moves files, but "
+            "DOES write Markdown proposals to migration/proposed-moves.md, "
+            "migration/rollback-plan.md, and (if any) migration/conflicts.md, "
+            "plus an audit line to migration/migration-log.md. Run "
+            "`git status` afterwards to see what was written; "
+            "`git restore prompts/ralph-meta-chain/migration/` reverts. "
+            "Returns the proposal summary + conflict count."
         ),
         "inputSchema": {"type": "object", "properties": {}, "required": []},
     },
@@ -271,6 +276,12 @@ def tool_ralph_migration_dry_run(args: dict[str, Any]) -> dict[str, Any]:
     # harness CLI doesn't expose a `migration` subcommand. The propose
     # script generates Markdown proposals + conflict reports without
     # moving any file (MEDIUM risk per the script's own header).
+    #
+    # IMPORTANT: this is NOT side-effect-free. The propose script writes
+    # proposed-moves.md, rollback-plan.md, conflicts.md (if conflicts),
+    # and appends to migration-log.md. The tool description in TOOLS[]
+    # says so explicitly. We surface the dirty paths in the response so
+    # the user knows what to `git restore`.
     root = _ralph_root()
     propose = os.path.join(root, "migration", "scripts", "ralph_propose_migration.sh")
     if not os.path.exists(propose):
@@ -295,6 +306,19 @@ def tool_ralph_migration_dry_run(args: dict[str, Any]) -> dict[str, Any]:
                 suffix += f"\n**Conflicts:** {len(lines)} (apply gate would refuse)"
         except OSError:
             pass
+    written_paths = [
+        proposed,
+        os.path.join(root, "migration", "rollback-plan.md"),
+        conflicts,
+        os.path.join(root, "migration", "migration-log.md"),
+    ]
+    written_paths = [p for p in written_paths if os.path.exists(p)]
+    if written_paths:
+        suffix += (
+            "\n\n_Wrote (not committed): "
+            + ", ".join(p.split("/migration/", 1)[-1] for p in written_paths)
+            + ". Revert with `git restore prompts/ralph-meta-chain/migration/`._"
+        )
     return _text(f"```\n{body}\n```{suffix}")
 
 

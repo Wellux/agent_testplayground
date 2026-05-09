@@ -334,6 +334,33 @@ class TestRalphMcpServerHarnessIntegration(unittest.TestCase):
             f"{propose} must be executable",
         )
 
+    def test_migration_tool_description_acknowledges_writes(self):
+        """Regression for Codex P2: tool MUST disclose that it writes
+        proposal Markdown — calling it a side-effect-free 'preview' is
+        a contract violation that surprises clients.
+        """
+        responses = _spawn_and_exchange(
+            [{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}]
+        )
+        tools = responses[0]["result"]["tools"]
+        migration = next(t for t in tools if t["name"] == "ralph_migration_dry_run")
+        desc = migration["description"].lower()
+        # Must NOT claim it's read-only / side-effect-free.
+        self.assertNotIn("without writing anything", desc)
+        # MUST mention the writes explicitly.
+        self.assertTrue(
+            any(
+                phrase in desc
+                for phrase in (
+                    "writes",
+                    "write markdown",
+                    "proposal",
+                )
+            ),
+            f"description must disclose writes: {desc!r}",
+        )
+        self.assertIn("git restore", desc)
+
 
 if __name__ == "__main__":
     unittest.main()

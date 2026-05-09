@@ -79,12 +79,12 @@ above are the future-proof path.
 Registered in `~/.codex/config.toml` as `[mcp_servers.ralph]`. Four
 read-only tools:
 
-| Tool                       | Use                                                       |
-| -------------------------- | --------------------------------------------------------- |
-| `ralph_query`              | semantic search the vault (Markdown bullets + wikilinks)  |
-| `ralph_axis_status`        | last log line for one or all 8 axes                        |
-| `ralph_self_test`          | run the local CI mirror (frontmatter, links, privacy, …)  |
-| `ralph_migration_dry_run`  | preview vault migration proposals                          |
+| Tool                       | Use                                                       | Side-effects |
+| -------------------------- | --------------------------------------------------------- | ------------ |
+| `ralph_query`              | semantic search the vault (Markdown bullets + wikilinks)  | none         |
+| `ralph_axis_status`        | last log line for one or all 8 axes                        | none         |
+| `ralph_self_test`          | run the local CI mirror (frontmatter, links, privacy, …)  | none         |
+| `ralph_migration_dry_run`  | generate migration proposal Markdown                       | writes to `migration/` (never moves files; revert via `git restore`) |
 
 ## Operating rules
 

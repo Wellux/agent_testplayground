@@ -6,15 +6,22 @@ library** — the heavy lifting stays in `scripts/harness/`.
 
 ## Tools exposed
 
-| MCP tool                    | Wraps                                           | Mutates? |
-| --------------------------- | ----------------------------------------------- | -------- |
-| `ralph_query`               | `harness query --semantic <q>`                   | no       |
-| `ralph_axis_status`          | reads `$VAULT/90-Meta/log.md`                    | no       |
-| `ralph_self_test`            | `harness self-test`                              | no       |
-| `ralph_migration_dry_run`    | `harness migration propose --dry-run`            | no       |
+| MCP tool                    | Wraps                                                          | Mutates working tree? |
+| --------------------------- | -------------------------------------------------------------- | --------------------- |
+| `ralph_query`               | `harness query --semantic <q> --k <n>`                          | no                    |
+| `ralph_axis_status`          | reads `$VAULT/90-Meta/log.md`                                   | no                    |
+| `ralph_self_test`            | `harness self-test`                                             | no                    |
+| `ralph_migration_dry_run`    | `migration/scripts/ralph_propose_migration.sh`                  | **yes (proposals only)** |
 
-All tools are read-only by design. Mutating commands stay behind
-explicit slash commands or subagents that the user can review.
+`ralph_migration_dry_run` writes Markdown proposals (`proposed-moves.md`,
+`rollback-plan.md`, `conflicts.md`, audit line in `migration-log.md`)
+but **never moves files**. The proposals are the artefact; the apply
+gate (separate, explicit) is the only thing that runs `git mv`. Revert
+proposals with `git restore prompts/ralph-meta-chain/migration/`. The
+tool's `description` field surfaces this contract to the LLM client.
+
+The other three tools are strictly read-only. Mutating commands stay
+behind explicit slash commands or subagents that the user can review.
 
 ## How it talks
 

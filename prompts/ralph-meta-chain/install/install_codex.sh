@@ -308,27 +308,61 @@ if os.path.exists(toml_path):
     with open(toml_path) as f:
         existing = f.read()
 
-# Strip any prior ralph block (between our marker comment and the
-# next top-level [section] or EOF).
-stripped_lines = []
-in_ralph = False
-for line in existing.splitlines(keepends=True):
-    s = line.strip()
-    if s == "# RALPH-managed: ralph MCP server":
-        in_ralph = True
-        continue
-    if in_ralph:
-        # End the ralph block when we hit a new top-level table that
-        # is NOT a sub-table of mcp_servers.ralph.
-        if s.startswith("[") and not s.startswith("[mcp_servers.ralph"):
-            in_ralph = False
-            stripped_lines.append(line)
+# Strip any prior ralph block. We strip in TWO passes:
+#   (1) Marker-tagged blocks (our own prior installs).
+#   (2) Bare [mcp_servers.ralph] tables (manual user setup or older
+#       installer without the marker comment) — TOML rejects duplicate
+#       tables, so failing to strip these would corrupt the file
+#       precisely for users most likely to re-run us.
+# Both passes also strip child sub-tables ([mcp_servers.ralph.env],
+# [mcp_servers.ralph.X]).
+def strip_ralph_blocks(text):
+    out_lines = []
+    in_ralph = False
+    found_unmarked = False
+    pending_marker_drop = False
+    lines = text.splitlines(keepends=True)
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        s = line.strip()
+        if s == "# RALPH-managed: ralph MCP server":
+            in_ralph = True
+            i += 1
             continue
-        # Skip lines inside the ralph block.
-        continue
-    stripped_lines.append(line)
+        if in_ralph:
+            if s.startswith("[") and not s.startswith("[mcp_servers.ralph"):
+                in_ralph = False
+                out_lines.append(line)
+                i += 1
+                continue
+            i += 1
+            continue
+        # Pass 2: bare ralph table (no marker preceding).
+        if s == "[mcp_servers.ralph]" or s.startswith("[mcp_servers.ralph."):
+            found_unmarked = True
+            # Also drop a single blank line immediately above (cosmetic).
+            if out_lines and out_lines[-1].strip() == "":
+                out_lines.pop()
+            i += 1
+            while i < len(lines):
+                ns = lines[i].strip()
+                if ns.startswith("[") and not ns.startswith("[mcp_servers.ralph"):
+                    break
+                i += 1
+            continue
+        out_lines.append(line)
+        i += 1
+    return "".join(out_lines), found_unmarked
 
-cleaned = "".join(stripped_lines).rstrip()
+cleaned_text, found_unmarked = strip_ralph_blocks(existing)
+if found_unmarked:
+    print(
+        "[install-codex] note: replaced existing unmarked "
+        "[mcp_servers.ralph] block in {} (manual setup or older installer)"
+        .format(toml_path)
+    )
+cleaned = cleaned_text.rstrip()
 out = (cleaned + ("\n\n" if cleaned else "") + block).lstrip("\n")
 
 # Atomic write.
