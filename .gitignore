@@ -10,11 +10,17 @@ prompts/ralph-meta-chain/config.yml
 **/secrets.local
 **/secrets.local.*
 
-# Obsidian plugin build artifacts
+# Obsidian plugin build artifacts (Phase 1-6 reference)
 obsidian-ralph/main.js
 obsidian-ralph/node_modules/
 obsidian-ralph/.npm/
 obsidian-ralph/dist/
+
+# Obsidian plugin build artifacts (Round 6 greenfield)
+prompts/ralph-meta-chain/obsidian-plugin/main.js
+prompts/ralph-meta-chain/obsidian-plugin/node_modules/
+prompts/ralph-meta-chain/obsidian-plugin/.npm/
+prompts/ralph-meta-chain/obsidian-plugin/dist/
 
 # Harness build/run artifacts
 harness/.venv/

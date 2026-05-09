@@ -1,0 +1,53 @@
+/* Ralph Meta Chain — plugin styles. Minimal; the master spec mandates
+   styles.css ship; the actual UI mostly leans on Obsidian's CSS vars. */
+
+.ralph-status {
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.ralph-control-panel {
+  padding: 12px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.ralph-control-panel h3 {
+  margin: 16px 0 4px 0;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.ralph-control-panel .ralph-axis-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.ralph-control-panel .ralph-cmd-button {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 4px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ralph-control-panel .ralph-cmd-button:hover {
+  background: var(--background-modifier-hover);
+}
+
+.ralph-log-pre {
+  white-space: pre-wrap;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
+
+.ralph-metrics {
+  padding: 8px;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+}
