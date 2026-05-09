@@ -268,3 +268,55 @@ assert 'ralph' not in d.get('mcp_servers', {}), 'ralph block should be gone'
   [ ! -d "$HOME/.agents/skills" ] || [ -z "$(ls -A "$HOME/.agents/skills" 2>/dev/null)" ]
   popd >/dev/null
 }
+
+@test "project scope writes prompts to repo .codex/prompts/ (NOT user-global ~/.codex)" {
+  # Regression for Codex P2-3: project scope previously leaked prompts
+  # into the user-global $CODEX_HOME/prompts/ directory.
+  pushd "$BATS_TEST_TMPDIR" >/dev/null
+  cp -r "$REPO" testrepo
+  cd testrepo
+  # Pre-seed user-global with an unrelated personal prompt.
+  mkdir -p "$CODEX_HOME/prompts"
+  echo "my personal prompt" > "$CODEX_HOME/prompts/my-personal.md"
+  run "./prompts/ralph-meta-chain/install/install_codex.sh" --scope project
+  [ "$status" -eq 0 ]
+  # Project prompts went to repo .codex/, not HOME .codex/.
+  [ -L "./.codex/prompts/ralph-cron.md" ]
+  # User-global prompts directory still has ONLY the personal prompt.
+  [ "$(ls "$CODEX_HOME/prompts" | sort)" = "my-personal.md" ]
+  popd >/dev/null
+}
+
+@test "project uninstall does NOT touch user-global config.toml (P2-4)" {
+  # Regression for Codex P2-4: a project/vault uninstall would
+  # unconditionally strip ~/.codex/config.toml even though the project
+  # install never wrote to it.
+  pushd "$BATS_TEST_TMPDIR" >/dev/null
+  cp -r "$REPO" testrepo
+  cd testrepo
+  # Pre-seed user-global config.toml with a manually-managed ralph block.
+  mkdir -p "$CODEX_HOME"
+  cat > "$CODEX_HOME/config.toml" <<'EOF'
+# user manual setup
+model = "gpt-5"
+
+[mcp_servers.ralph]
+command = "user-installed"
+EOF
+  before_hash="$(sha256sum "$CODEX_HOME/config.toml" | cut -d' ' -f1)"
+
+  "./prompts/ralph-meta-chain/install/install_codex.sh" --scope project >/dev/null
+  # Project install must NOT touch user-global config.toml.
+  mid_hash="$(sha256sum "$CODEX_HOME/config.toml" | cut -d' ' -f1)"
+  [ "$before_hash" = "$mid_hash" ]
+
+  run "./prompts/ralph-meta-chain/install/uninstall_codex.sh" --scope project
+  [ "$status" -eq 0 ]
+  # And uninstall must STILL not touch user-global config.toml.
+  after_hash="$(sha256sum "$CODEX_HOME/config.toml" | cut -d' ' -f1)"
+  [ "$before_hash" = "$after_hash" ]
+
+  # The uninstaller should announce the skip.
+  [[ "$output" == *"manifest says with_mcp=false"* ]]
+  popd >/dev/null
+}

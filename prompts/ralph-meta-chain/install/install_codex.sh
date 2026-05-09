@@ -125,11 +125,29 @@ resolve_briefing_dir() {
 SKILLS_ROOT="$(resolve_skills_root)"
 SKILLS_PARENT="$(dirname "$SKILLS_ROOT")"
 BRIEFING_DIR="$(resolve_briefing_dir)"
-PROMPTS_DIR="$CODEX_HOME/prompts"
-TOML_FILE="$CODEX_HOME/config.toml"
-MANIFEST_DIR="$CODEX_HOME"
-[[ "$SCOPE" == "project" ]] && MANIFEST_DIR="$REPO/.codex"
-[[ "$SCOPE" == "vault" ]]   && MANIFEST_DIR="$BRIEFING_DIR/.codex"
+
+# Prompts and config.toml are SCOPE-AWARE so a project/vault install
+# never leaks into the user-global $CODEX_HOME (Codex P2 review on PR #2).
+# Codex CLI honours $CODEX_HOME for prompts; project/vault scopes do not
+# share this with the global install — they're meant to ship via the
+# repo / vault root respectively.
+case "$SCOPE" in
+  user)
+    PROMPTS_DIR="$CODEX_HOME/prompts"
+    TOML_FILE="$CODEX_HOME/config.toml"
+    MANIFEST_DIR="$CODEX_HOME"
+    ;;
+  project)
+    PROMPTS_DIR="$REPO/.codex/prompts"
+    TOML_FILE="$REPO/.codex/config.toml"
+    MANIFEST_DIR="$REPO/.codex"
+    ;;
+  vault)
+    PROMPTS_DIR="$BRIEFING_DIR/.codex/prompts"
+    TOML_FILE="$BRIEFING_DIR/.codex/config.toml"
+    MANIFEST_DIR="$BRIEFING_DIR/.codex"
+    ;;
+esac
 MANIFEST="$MANIFEST_DIR/.ralph-installed.json"
 
 # Check parent dirs exist (don't auto-create the user's HOME etc.)

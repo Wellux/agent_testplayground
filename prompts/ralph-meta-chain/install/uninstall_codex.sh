@@ -62,7 +62,6 @@ MANIFEST_DIR="$CODEX_HOME"
 [[ "$SCOPE" == "project" ]] && MANIFEST_DIR="$REPO/.codex"
 [[ "$SCOPE" == "vault" ]]   && MANIFEST_DIR="$BRIEFING_DIR/.codex"
 MANIFEST="$MANIFEST_DIR/.ralph-installed.json"
-TOML_FILE="$CODEX_HOME/config.toml"
 
 echo "[uninstall-codex] manifest:  $MANIFEST"
 echo "[uninstall-codex] dry-run:   $DRY_RUN"
@@ -75,6 +74,22 @@ fi
 if ! command -v python3 >/dev/null 2>&1; then
   echo "[uninstall-codex] python3 required" >&2; exit 66
 fi
+
+# Read the manifest to learn what THIS install wrote. Crucial for the
+# MCP strip — without this, a project/vault uninstall would clobber the
+# user-global $CODEX_HOME/config.toml even though that install never
+# touched it (Codex P2 review on PR #2).
+MANIFEST_WITH_MCP="$(python3 -c '
+import json, sys
+m = json.load(open(sys.argv[1]))
+print("yes" if m.get("with_mcp") else "no")
+' "$MANIFEST")"
+MANIFEST_TOML_FILE="$(python3 -c '
+import json, sys
+m = json.load(open(sys.argv[1]))
+print(m.get("toml_file") or "")
+' "$MANIFEST")"
+TOML_FILE="${MANIFEST_TOML_FILE:-$CODEX_HOME/config.toml}"
 
 # ── Remove tracked artefacts ────────────────────────────────────────────────
 
@@ -162,6 +177,12 @@ cleanup_empty_dirs
 # ── Strip [mcp_servers.ralph] from config.toml ──────────────────────────────
 
 strip_mcp() {
+  # Skip entirely if THIS install didn't write MCP. Otherwise we'd
+  # corrupt an unrelated user-scope MCP block (P2-4 fix).
+  if [[ "$MANIFEST_WITH_MCP" != "yes" ]]; then
+    echo "[uninstall-codex] skip   MCP strip (manifest says with_mcp=false)"
+    return 0
+  fi
   if [[ ! -f "$TOML_FILE" ]]; then return 0; fi
   if [[ $DRY_RUN -eq 1 ]]; then
     echo "── DRY: strip [mcp_servers.ralph] from $TOML_FILE"
@@ -209,8 +230,14 @@ else
   echo "[uninstall-codex] removed manifest"
 fi
 
-# Best-effort: rmdir empty .codex/prompts and .codex/ if we left them empty.
-for d in "$CODEX_HOME/prompts" "$MANIFEST_DIR" "$CODEX_HOME"; do
+# Best-effort: rmdir empty Codex dirs we may have created. Scope-aware
+# so we don't try to rmdir the user-global $CODEX_HOME on a project
+# uninstall (P2-3 fix).
+empty_dirs_to_try=("$MANIFEST_DIR/prompts" "$MANIFEST_DIR")
+if [[ "$SCOPE" == "user" ]]; then
+  empty_dirs_to_try+=("$CODEX_HOME")
+fi
+for d in "${empty_dirs_to_try[@]}"; do
   [[ -d "$d" ]] || continue
   if [[ -z "$(ls -A "$d" 2>/dev/null)" ]]; then
     if [[ $DRY_RUN -eq 1 ]]; then echo "── DRY: rmdir $d"

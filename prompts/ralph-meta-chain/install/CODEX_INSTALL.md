@@ -31,15 +31,26 @@ prompts/ralph-meta-chain/install/install_codex.sh --without-prompts
 | --------------------------------- | ------------------------------------------ | ------------------------------------------------ |
 | **8 axis skills**                  | `<skills_root>/ralph-<axis>/SKILL.md`       | wraps `agents/ralph-<axis>.md` in a skill dir    |
 | **8 specialist skills**            | `<skills_root>/<slug>/`                     | symlink to `skills/<slug>/`                      |
-| **11 slash-command prompts**       | `~/.codex/prompts/ralph-*.md`               | symlink to `commands/*.md`                       |
-| **MCP server `ralph`**             | `[mcp_servers.ralph]` in `~/.codex/config.toml` | merged from `mcp-server/`                    |
+| **11 slash-command prompts**       | `<prompts_dir>/ralph-*.md`                  | symlink to `commands/*.md`                       |
+| **MCP server `ralph`**             | `[mcp_servers.ralph]` in `<toml_file>`      | merged from `mcp-server/`                        |
 | **AGENTS.md briefing**             | `<briefing_dir>/AGENTS.md`                  | `install/AGENTS.template.md` (cp; never clobbers)|
 | **Manifest**                       | `<manifest_dir>/.ralph-installed.json`      | for `uninstall_codex.sh`                         |
 
-`<skills_root>` per scope:
-- `user`    → `~/.agents/skills/`
-- `project` → `<repo>/.agents/skills/`
-- `vault`   → `<vault>/.agents/skills/`
+All paths are **scope-aware** so a project/vault install never leaks
+into the user-global `$CODEX_HOME` (Codex P2 review on PR #2):
+
+| Scope     | `<skills_root>`         | `<prompts_dir>`            | `<toml_file>`                | `<briefing_dir>` |
+| --------- | ----------------------- | -------------------------- | ---------------------------- | ---------------- |
+| `user`    | `~/.agents/skills/`     | `~/.codex/prompts/`        | `~/.codex/config.toml`       | `~/.codex/`      |
+| `project` | `<repo>/.agents/skills/` | `<repo>/.codex/prompts/`  | `<repo>/.codex/config.toml`  | `<repo>/`        |
+| `vault`   | `<vault>/.agents/skills/`| `<vault>/.codex/prompts/` | `<vault>/.codex/config.toml` | `<vault>/`       |
+
+The MCP server is auto-skipped for project/vault scope (Codex's
+config.toml is conventionally user-scoped). Pass `--with-mcp` to
+override and write into the scoped `.codex/config.toml`.
+
+Uninstall reads the manifest's `with_mcp` and `toml_file` fields, so
+a project/vault uninstall never touches `~/.codex/config.toml`.
 
 ## Why this differs from the Claude Code install
 
