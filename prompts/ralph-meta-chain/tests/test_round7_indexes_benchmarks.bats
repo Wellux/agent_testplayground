@@ -23,7 +23,10 @@ RMC="$REPO/prompts/ralph-meta-chain"
 }
 
 @test "every index file has frontmatter" {
+  # README.md is the human-prose entry point; intentionally lacks frontmatter.
+  # Mirrors the exemption in harness/tests/test_round7.py.
   for f in "$RMC/indexes"/*.md; do
+    [[ "$(basename "$f")" == "README.md" ]] && continue
     head -1 "$f" | grep -qE '^---[[:space:]]*$' || { echo "no frontmatter: $f"; return 1; }
   done
 }
