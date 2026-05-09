@@ -426,6 +426,24 @@ class SelfTest(unittest.TestCase):
             self.assertEqual(row["name"], "privacy")
             self.assertTrue(row["ok"])
 
+    def test_no_log_skips_ndjson_write(self) -> None:
+        """Regression for Codex P2: MCP-driven self-test must NOT mutate
+        the heal-checks audit log. The --no-log flag suppresses the
+        append while still returning the check rc + detail.
+        """
+        from harness.self_test import run
+        with tempfile.TemporaryDirectory() as d:
+            vault = pathlib.Path(d) / "vault"
+            (vault / "90-Meta").mkdir(parents=True)
+            os.environ["VAULT"] = str(vault)
+            rc = run(only="privacy",
+                     vault_override=str(vault),
+                     config_path=str(REPO / "prompts" / "ralph-meta-chain" / "config.yml"),
+                     no_log=True)
+            self.assertEqual(rc, 0)
+            # The audit file must not have been created.
+            self.assertFalse((vault / "90-Meta" / "heal-checks.ndjson").exists())
+
     def test_only_short_circuits_other_checks(self) -> None:
         """Regression: --only=privacy must NOT run _check_unit_tests
         (which would re-discover SelfTest and recurse for minutes)."""

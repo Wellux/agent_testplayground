@@ -98,7 +98,10 @@ TOOLS: list[dict[str, Any]] = [
         "name": "ralph_self_test",
         "description": (
             "Run the local CI mirror (frontmatter, links, privacy, shell, "
-            "python). Returns each check + status. Read-only."
+            "python). Returns each check + status. Read-only: invokes "
+            "`harness self-test --no-log` so the audit append to "
+            "$VAULT/90-Meta/heal-checks.ndjson is suppressed. Default "
+            "(cron) mode appends one row per check; the MCP tool does not."
         ),
         "inputSchema": {
             "type": "object",
@@ -261,7 +264,11 @@ def tool_ralph_self_test(args: dict[str, Any]) -> dict[str, Any]:
     cmd = _harness_cmd()
     if cmd is None:
         return _err("harness CLI not found on PATH and no local checkout")
-    sub = ["self-test"]
+    # Always pass --no-log so the MCP tool stays truly read-only. The cron-
+    # owned 06-autoheal pass uses the default (logged) mode for its audit
+    # trail; the MCP surface is for ad-hoc inspection that should NOT
+    # mutate $VAULT/90-Meta/heal-checks.ndjson.
+    sub = ["self-test", "--no-log"]
     only = args.get("only")
     if only:
         sub += ["--only", str(only)]

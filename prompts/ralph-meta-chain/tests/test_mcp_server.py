@@ -295,20 +295,34 @@ class TestRalphMcpServerHarnessIntegration(unittest.TestCase):
         self.assertIn("--only", argv)
         self.assertIn("privacy", argv)
 
-    def test_self_test_omits_only_when_absent(self):
-        responses, argv_log = self._spawn_with_fake_harness(
-            'echo "all green"\n',
-            [
-                {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {"name": "ralph_self_test", "arguments": {}},
-                }
-            ],
-        )
-        argv = argv_log.read_text().splitlines()
-        self.assertEqual(argv, ["self-test"])
+    def test_self_test_always_passes_no_log(self):
+        """Regression for Codex P2: MCP self-test must NEVER mutate the
+        heal-checks audit log. Verify --no-log is always in argv.
+        """
+        for arguments in ({}, {"only": "privacy"}):
+            with self.subTest(arguments=arguments):
+                _, argv_log = self._spawn_with_fake_harness(
+                    'echo "all green"\n',
+                    [
+                        {
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "tools/call",
+                            "params": {
+                                "name": "ralph_self_test",
+                                "arguments": arguments,
+                            },
+                        }
+                    ],
+                )
+                argv = argv_log.read_text().splitlines()
+                self.assertIn(
+                    "--no-log",
+                    argv,
+                    f"--no-log MUST be passed (argv={argv}); MCP self-test "
+                    "is advertised as read-only and must not append to "
+                    "heal-checks.ndjson.",
+                )
 
     def test_migration_dry_run_invokes_propose_shell_script(self):
         """Regression: previously called nonexistent `harness migration propose`."""

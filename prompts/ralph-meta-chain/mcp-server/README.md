@@ -10,7 +10,7 @@ library** — the heavy lifting stays in `scripts/harness/`.
 | --------------------------- | -------------------------------------------------------------- | --------------------- |
 | `ralph_query`               | `harness query --semantic <q> --k <n>`                          | no                    |
 | `ralph_axis_status`          | reads `$VAULT/90-Meta/log.md`                                   | no                    |
-| `ralph_self_test`            | `harness self-test`                                             | no                    |
+| `ralph_self_test`            | `harness self-test --no-log`                                    | no (the cron-default mode appends to `heal-checks.ndjson`; the MCP tool suppresses it) |
 | `ralph_migration_dry_run`    | `migration/scripts/ralph_propose_migration.sh`                  | **yes (proposals only)** |
 
 `ralph_migration_dry_run` writes Markdown proposals (`proposed-moves.md`,
