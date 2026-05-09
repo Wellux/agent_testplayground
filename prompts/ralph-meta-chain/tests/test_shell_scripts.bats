@@ -15,14 +15,14 @@ setup() {
   mkdir -p "$VAULT/30-Notes" "$VAULT/40-Skills" "$VAULT/90-Meta"
 }
 
-@test "every shim supports --help (15 scripts)" {
+@test "every shim supports --help (16 scripts)" {
   count=0
   for f in "$SCRIPTS"/ralph_*.sh; do
     out="$("$f" --help 2>&1 || true)"
     [[ "$out" == *USAGE* ]] || { echo "no USAGE in $f --help"; return 1; }
     count=$((count + 1))
   done
-  [[ $count -eq 15 ]] || { echo "expected 15 shims, got $count"; return 1; }
+  [[ $count -eq 16 ]] || { echo "expected 16 shims, got $count"; return 1; }
 }
 
 @test "bash -n on every shim" {

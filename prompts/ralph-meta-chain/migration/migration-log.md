@@ -466,3 +466,34 @@
 ## [2026-05-09T16:27:14Z] migration | op=propose moves=0 conflicts=0
 ## [2026-05-09T16:27:24Z] migration | op=inventory files=333
 ## [2026-05-09T16:27:24Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T18:55:21Z] migration | op=inventory files=348
+## [2026-05-09T18:55:22Z] migration | op=classify classes=28
+## [2026-05-09T18:55:22Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T18:55:23Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T18:55:23Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T18:55:32Z] migration | op=inventory files=347
+## [2026-05-09T18:55:32Z] migration | op=classify classes=28
+## [2026-05-09T18:55:32Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T18:55:32Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T18:55:41Z] migration | op=inventory files=348
+## [2026-05-09T18:55:41Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T18:56:59Z] migration | op=inventory files=348
+## [2026-05-09T18:56:59Z] migration | op=classify classes=28
+## [2026-05-09T18:57:00Z] migration | op=propose moves=3 conflicts=1
+## [2026-05-09T19:00:06Z] migration | op=inventory files=348
+## [2026-05-09T19:00:06Z] migration | op=classify classes=25
+## [2026-05-09T19:00:06Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:06Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:07Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:07Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:16Z] migration | op=inventory files=347
+## [2026-05-09T19:00:16Z] migration | op=classify classes=25
+## [2026-05-09T19:00:16Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:16Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:24Z] migration | op=inventory files=348
+## [2026-05-09T19:00:24Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:47Z] migration | op=inventory files=348
+## [2026-05-09T19:00:48Z] migration | op=classify classes=25
+## [2026-05-09T19:00:48Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:48Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T19:00:48Z] migration | op=propose moves=0 conflicts=0

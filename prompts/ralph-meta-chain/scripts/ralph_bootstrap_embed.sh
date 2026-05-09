@@ -22,14 +22,14 @@ usage() {
   cat <<EOF
 ralph_bootstrap_embed.sh — bootstrap the local vault embedding index.
 
-Usage: $0 [--apply] [--model <name>]
+USAGE: $0 [--apply] [--model <name>]
 
-Options:
+OPTIONS:
   --apply            Actually run (default is dry-run).
   --model <name>     Ollama model to pull (default: nomic-embed-text).
   -h, --help         Show this help.
 
-Environment:
+ENVIRONMENT:
   RALPH_EMBED_MODEL  Override default embedding model.
 EOF
 }
