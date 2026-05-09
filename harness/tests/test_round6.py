@@ -84,6 +84,34 @@ class GreenfieldPluginPresent(unittest.TestCase):
         if m is not None:
             self.assertEqual(m.group(1), "", "userIdentityEmail default must be empty string")
 
+    def test_skill_and_experiment_stubs_replaced_with_real_runner(self) -> None:
+        """Round 6 shipped with two no-op stubs (Generate Skill From Current
+        Note, Generate Experiment From Current Note). They were replaced
+        with a real runCommandPromptOnNote() helper that composes the
+        matching commands/<name>.md spec with the active note + spawns
+        claude -p."""
+        main_ts = (PLUGIN_DIR / "src" / "main.ts").read_text()
+        runner_ts = (PLUGIN_DIR / "src" / "runner.ts").read_text()
+
+        # Stubs are gone.
+        self.assertNotIn("(stub) skill draft would derive", main_ts,
+                         "skill stub still present in main.ts")
+        self.assertNotIn("(stub) experiment fixture would derive", main_ts,
+                         "experiment stub still present in main.ts")
+
+        # Both callbacks now call runCommandPromptOnNote with the right command file.
+        self.assertIn('runCommandPromptOnNote(', main_ts)
+        self.assertIn('"ralph-skill.md"', main_ts,
+                      "skill callback should reference ralph-skill.md")
+        self.assertIn('"ralph-experiment.md"', main_ts,
+                      "experiment callback should reference ralph-experiment.md")
+
+        # The helper exists in runner.ts.
+        self.assertIn("export async function runCommandPromptOnNote", runner_ts)
+        # And it composes the prompt with $ARGUMENTS + COMPLETE-token semantics.
+        self.assertIn("$ARGUMENTS", runner_ts)
+        self.assertIn("<promise>COMPLETE</promise>", runner_ts)
+
 
 class CommandsTemplates(unittest.TestCase):
     SLUGS = (

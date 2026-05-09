@@ -195,3 +195,84 @@ export async function runShim(
     child.on("close", code => resolve(code ?? -1));
   });
 }
+
+/**
+ * Run a Claude Code slash-command spec from prompts/ralph-meta-chain/commands/
+ * with the active note as `$ARGUMENTS`. Used by the plugin's
+ * "Generate Skill From Current Note" / "Generate Experiment From Current Note"
+ * commands. Composes:
+ *
+ *   <commands/<commandFile>>            (the slash-command spec)
+ *   ---
+ *   ## $ARGUMENTS
+ *   <noteRelPath>
+ *   ## Source note content
+ *   <note body>
+ *   Now perform the work above. Emit <promise>COMPLETE</promise> when done.
+ *
+ * Then spawns `claude -p` so the LLM uses Edit/Write tools to land the
+ * draft (skill candidate or fixture YAML) per the spec's instructions.
+ */
+export async function runCommandPromptOnNote(
+  s: RalphSettings,
+  commandFile: string,
+  noteRelPath: string,
+  sink: LogSink,
+): Promise<number> {
+  if (!s.repoRoot) throw new Error("Ralph: repoRoot not set in plugin settings.");
+  if (!s.vaultRoot) throw new Error("Ralph: vaultRoot not set in plugin settings.");
+
+  const commandPath = path.join(ralphDir(s), "commands", commandFile);
+  const noteAbsPath = path.join(s.vaultRoot, noteRelPath);
+
+  let commandSpec: string;
+  let noteText: string;
+  try {
+    commandSpec = await fs.readFile(commandPath, "utf8");
+  } catch {
+    throw new Error(`Ralph: command spec missing at ${commandPath}`);
+  }
+  try {
+    noteText = await fs.readFile(noteAbsPath, "utf8");
+  } catch {
+    throw new Error(`Ralph: active note not readable at ${noteAbsPath}`);
+  }
+
+  const fullPrompt = [
+    commandSpec,
+    "",
+    "---",
+    "",
+    "## $ARGUMENTS",
+    "",
+    noteRelPath,
+    "",
+    `## Source note content (${noteRelPath})`,
+    "",
+    "```markdown",
+    noteText,
+    "```",
+    "",
+    "Now perform the work described above. Use the Edit/Write tools to",
+    "create the draft file in the location the spec names. When done,",
+    "emit `<promise>COMPLETE</promise>` on its own line.",
+  ].join("\n");
+
+  return await new Promise<number>((resolve, reject) => {
+    const child = spawn(s.claudeBin, ["-p", fullPrompt], {
+      cwd: s.repoRoot,
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const onLine = (chunk: Buffer | string) => {
+      const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+      for (const line of text.split(/\r?\n/)) {
+        if (line) sink(line);
+      }
+    };
+    child.stdout?.on("data", onLine);
+    child.stderr?.on("data", onLine);
+    child.on("error", err => reject(err));
+    child.on("close", code => resolve(code ?? -1));
+  });
+}

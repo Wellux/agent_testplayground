@@ -1,7 +1,10 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from "obsidian";
 import { promises as fs } from "fs";
 import * as path from "path";
-import { runAxis, runFullChain, runHarness, runShim, touchStop, removeStop, AXIS_TO_PROMPT } from "./runner";
+import {
+  runAxis, runFullChain, runHarness, runShim, runCommandPromptOnNote,
+  touchStop, removeStop, AXIS_TO_PROMPT,
+} from "./runner";
 import { LogView, LOG_VIEW_TYPE } from "./log-view";
 import { MetricsView, METRICS_VIEW_TYPE } from "./metrics-view";
 import { ControlPanelView, CONTROL_PANEL_VIEW_TYPE } from "./control-panel-view";
@@ -132,7 +135,11 @@ export default class RalphPlugin extends Plugin {
       id: "ralph-skill-from-note",
       name: "Ralph: Generate Skill From Current Note",
       callback: () => this.actOnCurrentNote("skill", async (rel) => {
-        new Notice(`(stub) skill draft would derive from ${rel}; see 02-skills-optimizer.md`);
+        await runCommandPromptOnNote(
+          this.settings, "ralph-skill.md", rel,
+          line => this.statusBar?.appendLog(line),
+        );
+        new Notice(`Ralph: skill candidate proposed from ${rel} (review 40-Skills/)`);
       }),
     });
 
@@ -140,7 +147,11 @@ export default class RalphPlugin extends Plugin {
       id: "ralph-experiment-from-note",
       name: "Ralph: Generate Experiment From Current Note",
       callback: () => this.actOnCurrentNote("experiment", async (rel) => {
-        new Notice(`(stub) experiment fixture would derive from ${rel}; see 04_Harnesses/`);
+        await runCommandPromptOnNote(
+          this.settings, "ralph-experiment.md", rel,
+          line => this.statusBar?.appendLog(line),
+        );
+        new Notice(`Ralph: experiment fixture proposed from ${rel} (review harness/fixtures/)`);
       }),
     });
 
