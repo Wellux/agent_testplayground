@@ -4,15 +4,20 @@
   Template for Ralph meta-chain launchd agents on macOS.
 
   Placeholders (substituted by scripts/install.sh):
-    @@AXIS@@      research | memory | skills | interaction | compress | heal | evolve | update
-    @@HOUR@@      0..23, or -1 for hourly, or -6 for every-6-hours
-    @@MINUTE@@    0..59
-    @@PROMPT@@    file under $RALPH/ to feed claude -p
-    @@TIMEOUT@@   seconds for `timeout` outer wrapper
-    @@MAXITERS@@  inner Ralph max iterations
-    @@WEEKDAY@@   0..6 (0=Sun) for weekly axes; empty for daily/hourly
-    @@RALPH@@     absolute path to prompts/ralph-meta-chain
-    @@LOG@@       absolute path to log file
+    @@AXIS@@        research | memory | skills | interaction | compress | heal | evolve | update
+    @@HOUR@@        0..23, or -1 for hourly, or -6 for every-6-hours
+    @@MINUTE@@      0..59
+    @@PROMPT@@      file under $RALPH/ to feed claude -p
+    @@TIMEOUT_BIN@@ absolute path to GNU `timeout` (Linux: /usr/bin/timeout;
+                    macOS w/ Homebrew coreutils: /opt/homebrew/bin/gtimeout
+                    or /usr/local/bin/gtimeout). install.sh probes at install
+                    time and refuses if neither is available, so launchd
+                    never gets a plist whose ProgramArguments is broken.
+    @@TIMEOUT@@     seconds for the outer wrapper
+    @@MAXITERS@@    inner Ralph max iterations
+    @@WEEKDAY@@     0..6 (0=Sun) for weekly axes; empty for daily/hourly
+    @@RALPH@@       absolute path to prompts/ralph-meta-chain
+    @@LOG@@         absolute path to log file
 
   Note: this template renders a single calendar trigger. install.sh post-
   processes the rendered plist to (a) drop the <key>Hour</key>+<integer/>
@@ -28,7 +33,7 @@
   <array>
     <string>/bin/bash</string>
     <string>-lc</string>
-    <string>i=0; until ! /usr/bin/env timeout @@TIMEOUT@@ claude -p "$(cat @@RALPH@@/@@PROMPT@@)" || [ $((i+=1)) -ge @@MAXITERS@@ ]; do :; done</string>
+    <string>i=0; until ! @@TIMEOUT_BIN@@ @@TIMEOUT@@ claude -p "$(cat @@RALPH@@/@@PROMPT@@)" || [ $((i+=1)) -ge @@MAXITERS@@ ]; do :; done</string>
   </array>
 
   <key>StartCalendarInterval</key>

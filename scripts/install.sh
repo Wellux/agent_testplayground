@@ -160,12 +160,40 @@ install_linux() {
 }
 
 # ── launchd plists (macOS) ──────────────────────────────────────────────────
+# Detect a GNU `timeout` binary. macOS doesn't ship one; users typically
+# install Homebrew coreutils which provides `gtimeout`. The template
+# refuses to run if neither is found, since launchd would otherwise
+# silently fail every cron firing.
+detect_timeout_bin() {
+  if command -v timeout >/dev/null 2>&1; then
+    command -v timeout
+    return
+  fi
+  if command -v gtimeout >/dev/null 2>&1; then
+    command -v gtimeout
+    return
+  fi
+  return 1
+}
+
 install_macos() {
   local LA="$HOME/Library/LaunchAgents"
   local TMPL="$REPO/scripts/launchd/ai.ralph.axis.plist.tmpl"
   if [[ ! -f "$TMPL" ]]; then
     echo "[install] template missing: $TMPL" >&2; exit 70
   fi
+
+  local TIMEOUT_BIN
+  if ! TIMEOUT_BIN="$(detect_timeout_bin)"; then
+    echo "[install] error: no GNU timeout/gtimeout on PATH." >&2
+    echo "  macOS install requires a working GNU timeout. Install via:" >&2
+    echo "    brew install coreutils    # provides /opt/homebrew/bin/gtimeout (Apple Silicon)" >&2
+    echo "                              # or /usr/local/bin/gtimeout (Intel)" >&2
+    echo "  Then re-run scripts/install.sh." >&2
+    exit 71
+  fi
+  echo "[install] using timeout binary: $TIMEOUT_BIN"
+
   mkdir -p "$LA"
 
   local axes=(research memory skills interaction compress heal evolve update)
@@ -185,6 +213,7 @@ install_macos() {
       -e "s|@@HOUR@@|${hours[$i]}|g" \
       -e "s|@@MINUTE@@|${minutes[$i]}|g" \
       -e "s|@@PROMPT@@|${prompts[$i]}|g" \
+      -e "s|@@TIMEOUT_BIN@@|$TIMEOUT_BIN|g" \
       -e "s|@@TIMEOUT@@|${timeouts[$i]}|g" \
       -e "s|@@MAXITERS@@|${maxiters[$i]}|g" \
       -e "s|@@WEEKDAY@@|${weekdays[$i]:-}|g" \

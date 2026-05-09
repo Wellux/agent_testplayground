@@ -183,6 +183,29 @@ def run_query(
     config_path: str | None,
 ) -> int:
     vault, conn, base_url, model = _open(config_path, vault_override)
+
+    # Route through the configured memory backend if the user opted in to
+    # cognee/letta/etc. via `embeddings.backend` or RALPH_MEM_BACKEND.
+    # Otherwise fall through to the default sqlite-vec + FTS5 hybrid.
+    backend = _resolve_backend(load_config(config_path), vault, model)
+    if backend is not None:
+        try:
+            results = backend.query(query, k=k)  # type: ignore[attr-defined]
+        except Exception as e:
+            log.error(
+                "%s.query() failed: %s — falling back to local sqlite",
+                getattr(backend, "name", "backend"), e,
+            )
+        else:
+            if not results:
+                print(f"(no results from backend {getattr(backend, 'name', '?')})")
+                return 1
+            print(f"# Query: {query} (backend={getattr(backend, 'name', '?')})\n")
+            for nid, score, path in results:
+                slug = pathlib.Path(nid).stem
+                print(f"- [[{slug}]] · {path}  (score={score:.3f})")
+            return 0
+
     vec = _ollama_embed(query, base_url, model)
 
     fts_rows: list[tuple[str, float]] = []

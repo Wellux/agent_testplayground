@@ -10,6 +10,11 @@ import { RalphSettings } from "./settings";
 
 const PROMISE_RE = /<promise>COMPLETE<\/promise>/;
 
+// Sentinel returned by runAxisOnce when the agent emitted the completion
+// promise. runAxis breaks on any non-zero return, so this just has to be
+// != 0; -2 is unused by Node's child_process exit codes.
+export const EXIT_PROMISE_COMPLETE = -2;
+
 export type LogSink = (line: string) => void;
 
 export const AXIS_TO_PROMPT: Record<string, string> = {
@@ -85,7 +90,17 @@ export async function runAxisOnce(
     child.stderr?.on("data", onLine);
     child.on("error", err => reject(err));
     child.on("close", code => {
-      if (sawPromise) sink("[ralph] promise=COMPLETE detected");
+      // Honor the prompt's exit contract: if the agent emitted
+      // <promise>COMPLETE</promise>, the axis is done — return a sentinel
+      // so runAxis() breaks the loop instead of re-firing the same prompt
+      // up to maxIterations times. claude exits 0 on either "more work
+      // pending" or "done"; without this check the iteration cap is the
+      // only brake. Mirrors voice-server/runner.py.
+      if (sawPromise) {
+        sink("[ralph] promise=COMPLETE detected");
+        resolve(EXIT_PROMISE_COMPLETE);
+        return;
+      }
       resolve(code ?? -1);
     });
   });

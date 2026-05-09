@@ -119,12 +119,17 @@ class MigrationPipelineReadyForStageC(unittest.TestCase):
     def setUpClass(cls) -> None:
         scripts = MIGRATION / "scripts"
         assert (scripts / "ralph_repo_inventory.sh").exists()
+        # ralph_repo_inventory.sh shells out per file for size+mtime+sha256;
+        # locally ~9 s on this repo, but slow CI runners or high-IO loads
+        # can push it past the _run() default of 30 s. Bump to 180 s for
+        # the full pipeline (each step independently) so a one-off slow
+        # step doesn't fail the whole audit suite.
         for s in (
             "ralph_repo_inventory.sh",
             "ralph_classify_repo_files.sh",
             "ralph_propose_migration.sh",
         ):
-            rc, _, err = _run([str(scripts / s)])
+            rc, _, err = _run([str(scripts / s)], timeout=180)
             if rc != 0:
                 raise AssertionError(f"{s} failed: {err}")
 
@@ -151,7 +156,10 @@ class MigrationPipelineReadyForStageC(unittest.TestCase):
                                 "rollback-plan.md should mirror moves count")
 
     def test_apply_default_dry_run_exits_64(self) -> None:
-        rc, _, _ = _run([str(MIGRATION / "scripts" / "ralph_apply_migration.sh")])
+        rc, _, _ = _run(
+            [str(MIGRATION / "scripts" / "ralph_apply_migration.sh")],
+            timeout=120,
+        )
         self.assertEqual(rc, 64, "apply default mode must be dry-run-correct (exit 64)")
 
     def test_apply_token_changes_when_proposal_changes(self) -> None:
@@ -159,7 +167,10 @@ class MigrationPipelineReadyForStageC(unittest.TestCase):
         proposed-moves.md content. Run propose twice with no source
         changes; sha256 must remain stable."""
         first = (MIGRATION / "proposed-moves.md").read_text()
-        _run([str(MIGRATION / "scripts" / "ralph_propose_migration.sh")])
+        _run(
+            [str(MIGRATION / "scripts" / "ralph_propose_migration.sh")],
+            timeout=120,
+        )
         second = (MIGRATION / "proposed-moves.md").read_text()
         # Bodies differ in `generated:` timestamp; hash the body sans frontmatter.
         def _strip_fm(text: str) -> str:

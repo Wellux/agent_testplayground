@@ -5,6 +5,11 @@ import { RalphSettings } from "./settings";
 
 const PROMISE_RE = /<promise>COMPLETE<\/promise>/;
 
+// Sentinel returned by runAxisOnce when the agent emitted the completion
+// promise. runAxis breaks on any non-zero return, so this value just has
+// to be != 0; -2 is unused by Node's child_process exit codes.
+export const EXIT_PROMISE_COMPLETE = -2;
+
 export type LogSink = (line: string) => void;
 
 function resolveRalphDir(s: RalphSettings): string {
@@ -76,7 +81,16 @@ export async function runAxisOnce(
     child.stderr?.on("data", onLine);
     child.on("error", err => reject(err));
     child.on("close", code => {
-      if (sawPromise) sink("[ralph] promise=COMPLETE detected");
+      // Honor the same exit contract as scripts/install.sh's `until ! ...`
+      // wrapper: if the agent emitted <promise>COMPLETE</promise>, the axis
+      // is done — return a sentinel so runAxis() breaks the loop instead
+      // of re-firing the same prompt up to maxIterations times. Mirrors
+      // voice-server's runner.py.
+      if (sawPromise) {
+        sink("[ralph] promise=COMPLETE detected");
+        resolve(EXIT_PROMISE_COMPLETE);
+        return;
+      }
       resolve(code ?? -1);
     });
   });
