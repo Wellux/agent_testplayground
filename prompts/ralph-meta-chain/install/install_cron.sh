@@ -14,7 +14,29 @@
 
 set -euo pipefail
 
-REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+# Walk up from this script to find the repo root (looks for .git).
+# Pre-Round-8 this script lived at <repo>/scripts/install.sh, so $(..)
+# was the repo root. Post-Round-8 it lives at
+# <repo>/prompts/ralph-meta-chain/install/install_cron.sh, so a single
+# `..` would only get us to prompts/ralph-meta-chain/. Walk-up handles
+# either layout.
+_find_repo_root() {
+  local p
+  p="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  while [[ "$p" != "/" && -n "$p" ]]; do
+    if [[ -d "$p/.git" ]]; then
+      printf '%s' "$p"
+      return 0
+    fi
+    p="$(dirname "$p")"
+  done
+  return 1
+}
+
+REPO="$(_find_repo_root)" || {
+  echo "[install] error: no .git ancestor found" >&2
+  exit 70
+}
 RALPH="$REPO/prompts/ralph-meta-chain"
 CONFIG="$RALPH/config.yml"
 DRY_RUN=0
@@ -36,7 +58,17 @@ USAGE
 for arg in "$@"; do
   case "$arg" in
     --dry-run)    DRY_RUN=1 ;;
-    --uninstall)  exec "$REPO/scripts/uninstall.sh" ;;
+    --uninstall)
+      # Master-spec target first; legacy fallback for pre-Round-8 trees.
+      if [[ -f "$RALPH/install/uninstall_cron.sh" ]]; then
+        exec "$RALPH/install/uninstall_cron.sh"
+      elif [[ -f "$REPO/scripts/uninstall.sh" ]]; then
+        exec "$REPO/scripts/uninstall.sh"
+      else
+        echo "[install] error: no uninstall script found" >&2
+        exit 70
+      fi
+      ;;
     -h|--help)    usage; exit 0 ;;
     *)            echo "Unknown arg: $arg" >&2; usage; exit 64 ;;
   esac
@@ -191,9 +223,14 @@ detect_timeout_bin() {
 
 install_macos() {
   local LA="$HOME/Library/LaunchAgents"
-  local TMPL="$REPO/scripts/launchd/ai.ralph.axis.plist.tmpl"
+  # Master-spec target first; legacy fallback for pre-Round-8 trees.
+  local TMPL="$RALPH/install/launchd/ai.ralph.axis.plist.tmpl"
   if [[ ! -f "$TMPL" ]]; then
-    echo "[install] template missing: $TMPL" >&2; exit 70
+    TMPL="$REPO/scripts/launchd/ai.ralph.axis.plist.tmpl"
+  fi
+  if [[ ! -f "$TMPL" ]]; then
+    echo "[install] template missing (tried master-spec + legacy paths)" >&2
+    exit 70
   fi
 
   local TIMEOUT_BIN

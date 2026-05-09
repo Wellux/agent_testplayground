@@ -430,3 +430,15 @@
 ## [2026-05-09T15:54:48Z] migration | op=propose moves=0 conflicts=0
 ## [2026-05-09T15:54:48Z] migration | op=propose moves=0 conflicts=0
 ## [2026-05-09T15:54:48Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:16Z] migration | op=inventory files=333
+## [2026-05-09T16:06:17Z] migration | op=classify classes=22
+## [2026-05-09T16:06:17Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:17Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:19Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:19Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:29Z] migration | op=inventory files=332
+## [2026-05-09T16:06:29Z] migration | op=classify classes=22
+## [2026-05-09T16:06:30Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:30Z] migration | op=propose moves=0 conflicts=0
+## [2026-05-09T16:06:39Z] migration | op=inventory files=333
+## [2026-05-09T16:06:39Z] migration | op=propose moves=0 conflicts=0

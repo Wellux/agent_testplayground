@@ -112,6 +112,39 @@ class ConfigLoader(unittest.TestCase):
         self.assertIn("vault_path", cfg)
         self.assertIn("budgets", cfg)
 
+    def test_default_config_path_resolves_to_repo_root(self) -> None:
+        """Regression: post-Round-8 the harness lives at
+        prompts/ralph-meta-chain/scripts/harness/. Pre-fix,
+        `_default_config_path` used `here.parents[2]` which gave
+        prompts/ralph-meta-chain/scripts/, then appended
+        `prompts/ralph-meta-chain/config.yml` — producing
+        `.../scripts/prompts/ralph-meta-chain/config.yml` (doubled).
+
+        After the walk-up fix, the path should land at the actual
+        repo root + prompts/ralph-meta-chain/config.yml."""
+        from harness import _default_config_path, _find_repo_root
+        default = _default_config_path()
+        # Must include exactly ONE `prompts/ralph-meta-chain/` segment.
+        as_str = str(default)
+        self.assertEqual(as_str.count("prompts/ralph-meta-chain/"), 1,
+                         f"path doubled: {default}")
+        # Repo root must contain a .git dir (sanity that walk-up worked).
+        repo = _find_repo_root()
+        self.assertTrue((repo / ".git").exists(),
+                        f"_find_repo_root() returned {repo} but no .git there")
+        # Default-config path must equal repo / prompts / ralph-meta-chain / config.yml
+        expected = repo / "prompts" / "ralph-meta-chain" / "config.yml"
+        self.assertEqual(default, expected)
+
+    def test_load_config_no_args_falls_back_to_example(self) -> None:
+        """Regression for the same path-doubling bug: any harness command
+        invoked without --config must still resolve. Pre-fix this raised
+        FileNotFoundError because the default path was nonsense."""
+        from harness import load_config
+        cfg = load_config()  # no args → use default
+        self.assertIn("vault_path", cfg)
+        self.assertIn("budgets", cfg)
+
 
 class MemoryBackends(unittest.TestCase):
     """The default selector returns None (current code path); explicit

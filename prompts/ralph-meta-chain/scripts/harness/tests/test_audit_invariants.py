@@ -298,5 +298,54 @@ class StageCArtifactsTracked(unittest.TestCase):
         self.assertEqual(rc, 64, "--update-ci alone must dry-run (gates 4-5 missing)")
 
 
+class InstallCronPathResolution(unittest.TestCase):
+    """Regression: post-Round-8 install_cron.sh moved from
+    <repo>/scripts/install.sh to
+    <repo>/prompts/ralph-meta-chain/install/install_cron.sh. Before the
+    walk-up fix, `REPO=$(...$(dirname)/..)` resolved to
+    `<repo>/prompts/ralph-meta-chain/`, then appending
+    `prompts/ralph-meta-chain` doubled the path so even
+    `--dry-run` exited with "config.yml not found"."""
+
+    def test_dry_run_resolves_repo_root_correctly(self) -> None:
+        import shutil, tempfile
+        # Stand up a fake config so the script gets past the missing-config
+        # gate without touching the real repo's gitignored config.yml.
+        ralph = REPO / "prompts" / "ralph-meta-chain"
+        config_yml = ralph / "config.yml"
+        had_existing = config_yml.exists()
+        if not had_existing:
+            with tempfile.TemporaryDirectory() as scratch:
+                example = ralph / "config.example.yml"
+                cfg = (example.read_text()
+                       .replace("vault_path: ~/Obsidian/SecondBrain",
+                                f"vault_path: {scratch}"))
+                config_yml.write_text(cfg)
+                try:
+                    rc, out, err = _run(
+                        [str(ralph / "install" / "install_cron.sh"), "--dry-run"],
+                        cwd=REPO,
+                        timeout=30,
+                    )
+                finally:
+                    config_yml.unlink()
+        else:
+            rc, out, err = _run(
+                [str(ralph / "install" / "install_cron.sh"), "--dry-run"],
+                cwd=REPO,
+                timeout=30,
+            )
+        # Should NOT exit with the "$CONFIG not found" message (which
+        # was the symptom of the path-doubling bug).
+        self.assertEqual(rc, 0, f"--dry-run failed:\nstderr={err}\nstdout={out}")
+        # And the seed-output paths should have a single instance of
+        # `prompts/ralph-meta-chain/seed`, not doubled up.
+        combined = out + err
+        self.assertNotIn(
+            "prompts/ralph-meta-chain/prompts/ralph-meta-chain", combined,
+            f"path-doubling bug regressed:\n{combined}",
+        )
+
+
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()
