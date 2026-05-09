@@ -115,3 +115,36 @@ export async function runFullChain(s: RalphSettings, sink: LogSink): Promise<voi
     await runAxis(s, promptFile, sink);
   }
 }
+
+/**
+ * Spawn `harness <args>` once. Used for self-test, traces, reflect, etc.
+ * Returns the exit code; streams stdout/stderr to `sink`.
+ */
+export async function runHarness(
+  s: RalphSettings,
+  args: string[],
+  sink: LogSink
+): Promise<number> {
+  if (!s.repoPath) {
+    sink("[ralph] runHarness: repoPath not set");
+    return -1;
+  }
+  return await new Promise<number>((resolve, reject) => {
+    const child = spawn("python3", ["-m", "harness", ...args], {
+      cwd: path.join(s.repoPath, "harness"),
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"]
+    });
+
+    const onLine = (chunk: Buffer | string) => {
+      const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+      for (const line of text.split(/\r?\n/)) {
+        if (line) sink(line);
+      }
+    };
+    child.stdout?.on("data", onLine);
+    child.stderr?.on("data", onLine);
+    child.on("error", err => reject(err));
+    child.on("close", code => resolve(code ?? -1));
+  });
+}

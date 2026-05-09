@@ -56,7 +56,7 @@ Read `90-Meta/ralph-state.json`. The roster is keyed by axis
 | `last_run.timestamp` ≥ 25 hours old (compress)   | **zombie** — investigate                     |
 | `last_run.status != "COMPLETE"` for 2 runs       | **stuck** — likely budget never exhausting   |
 
-## Step 2 — Diagnose (parallel sub-agents)
+## Step 2 — Diagnose (parallel sub-agents + local CI mirror)
 
 Dispatch in a single message:
 
@@ -69,8 +69,14 @@ Dispatch in a single message:
   → if missing or 0 bytes, embeddings layer is broken.
 - `Bash`: `command -v claude && command -v ollama && command -v harness`
   → tool-availability heartbeat.
+- `Bash`: `harness self-test` — local CI mirror. Writes one ndjson row per
+  check (privacy / shell / python / unit-tests / plugin) to
+  `90-Meta/heal-checks.ndjson`. Read the **tail** of that file (only the
+  most recent run) and treat any `ok: false` row as a heal candidate.
 - (Optional) `mcp__github__pull_request_read get_check_runs` for the active
-  branch's latest CI; treat any non-success as a heal candidate.
+  branch's latest CI; treat any non-success as a heal candidate. Use the
+  local self-test as the primary signal — `gh` may be absent and the user
+  may run between commits.
 
 ## Step 3 — Triage
 

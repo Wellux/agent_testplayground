@@ -1,13 +1,9 @@
 """Smoke tests for the harness CLI. No network, no API key, no Ollama."""
 from __future__ import annotations
 
-import datetime as _dt
-import io
 import json
 import os
 import pathlib
-import shutil
-import sqlite3
 import sys
 import tempfile
 import unittest
@@ -227,8 +223,47 @@ class SeedTreeShipped(unittest.TestCase):
             "50-Prompts/code-review.md",
             "50-Prompts/daily-summary.md",
             "60-Interactions/user-profile.md",
+            "00-Inbox/sample-capture.md",
+            "10-Daily/2026-05-09.md",
         ):
             self.assertTrue((seed / rel).is_file(), f"missing seed file: {rel}")
+
+
+class SelfTest(unittest.TestCase):
+    """The privacy + shell + python checks should all pass on the current
+    tree. Plugin check is best-effort (skipped if no node_modules)."""
+
+    def test_privacy_check_passes(self) -> None:
+        from harness.self_test import _check_privacy
+        c = _check_privacy(REPO)
+        self.assertTrue(c.ok, c.detail)
+        self.assertEqual(c.name, "privacy")
+
+    def test_shell_check_passes(self) -> None:
+        from harness.self_test import _check_shell
+        c = _check_shell(REPO)
+        self.assertTrue(c.ok, c.detail)
+
+    def test_python_check_passes(self) -> None:
+        from harness.self_test import _check_python
+        c = _check_python(REPO)
+        self.assertTrue(c.ok, c.detail)
+
+    def test_writes_ndjson_row_per_check(self) -> None:
+        from harness.self_test import run
+        with tempfile.TemporaryDirectory() as d:
+            vault = pathlib.Path(d) / "vault"
+            (vault / "90-Meta").mkdir(parents=True)
+            os.environ["VAULT"] = str(vault)
+            rc = run(only="privacy",
+                     vault_override=str(vault),
+                     config_path=str(REPO / "prompts" / "ralph-meta-chain" / "config.yml"))
+            ndjson = (vault / "90-Meta" / "heal-checks.ndjson").read_text()
+            self.assertEqual(rc, 0)
+            self.assertEqual(len(ndjson.strip().splitlines()), 1)
+            row = json.loads(ndjson.strip().splitlines()[0])
+            self.assertEqual(row["name"], "privacy")
+            self.assertTrue(row["ok"])
 
 
 class CreatorRender(unittest.TestCase):

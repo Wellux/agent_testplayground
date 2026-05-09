@@ -11,6 +11,7 @@ from . import compress as compress_mod
 from . import embeddings as embeddings_mod
 from . import ingest as ingest_mod
 from . import reflect as reflect_mod
+from . import self_test as self_test_mod
 from . import traces as traces_mod
 
 
@@ -60,6 +61,10 @@ def _build_parser() -> argparse.ArgumentParser:
     p_t = sub.add_parser("traces", help="Tail / summarize 90-Meta/metrics.ndjson")
     p_t.add_argument("--tail", type=int, default=200)
     p_t.add_argument("--axis", default=None, help="filter to one axis")
+
+    p_st = sub.add_parser("self-test", help="Local CI mirror; writes 90-Meta/heal-checks.ndjson")
+    p_st.add_argument("--only", default=None,
+                      help="run a single check: privacy | shell | python | unit-tests | plugin")
 
     return parser
 
@@ -135,6 +140,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return traces_mod.run(
             tail=args.tail,
             axis=args.axis,
+            vault_override=args.vault,
+            config_path=args.config,
+        )
+    if args.cmd == "self-test":
+        return self_test_mod.run(
+            only=args.only,
             vault_override=args.vault,
             config_path=args.config,
         )

@@ -1,5 +1,5 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting, WorkspaceLeaf } from "obsidian";
-import { runAxis, runFullChain, touchStop, removeStop } from "./runner";
+import { runAxis, runFullChain, runHarness, touchStop, removeStop } from "./runner";
 import { LogView, LOG_VIEW_TYPE } from "./log-view";
 import { MetricsView, METRICS_VIEW_TYPE } from "./metrics-view";
 import { StatusBar } from "./status-bar";
@@ -79,6 +79,17 @@ export default class RalphPlugin extends Plugin {
       id: "ralph-open-metrics",
       name: "Ralph: Open metrics view",
       callback: () => this.activateView(METRICS_VIEW_TYPE)
+    });
+
+    this.addCommand({
+      id: "ralph-self-test",
+      name: "Ralph: Run self-test (local CI mirror)",
+      callback: async () => {
+        new Notice("Ralph: self-test started");
+        const code = await runHarness(this.settings, ["self-test"], line => this.statusBar?.appendLog(line));
+        new Notice(`Ralph: self-test exited (${code})`);
+        void this.statusBar?.refresh();
+      }
     });
 
     this.addSettingTab(new RalphSettingTab(this.app, this));
