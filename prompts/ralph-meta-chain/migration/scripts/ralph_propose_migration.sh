@@ -68,9 +68,30 @@ awk -F'|' '
   }
 ' "$cls_file" > "$tmp_moves"
 
+# Pre-process: when the canonical target already exists (a prior round
+# migrated content forward), the SOURCE is now legacy. Flip its move to
+# an archive move so the migration can complete cleanly.
+#
+#   src=docs/voice-multidevice-design.md
+#   tgt=prompts/ralph-meta-chain/docs/VOICE_MULTI_DEVICE_FUTURE_SCOPE.md
+#   target already exists  →  retarget src to _archive/_pre-migrated/<src>
+tmp_moves_resolved="$(mktemp)"
+trap 'rm -f "$tmp_moves" "$tmp_rollback" "$tmp_conflicts" "$tmp_moves_resolved"' EXIT
+archived=0
+while IFS=$'\t' read -r src tgt; do
+  if [[ -e "$repo/$tgt" ]]; then
+    new_tgt="prompts/ralph-meta-chain/migration/_archive/_pre-migrated/$src"
+    printf '%s\t%s\n' "$src" "$new_tgt" >> "$tmp_moves_resolved"
+    archived=$((archived + 1))
+  else
+    printf '%s\t%s\n' "$src" "$tgt" >> "$tmp_moves_resolved"
+  fi
+done < "$tmp_moves"
+mv "$tmp_moves_resolved" "$tmp_moves"
+
 total_moves=$(wc -l < "$tmp_moves" | tr -d ' ')
 
-# Detect conflicts: destination exists, source missing, target outside repo.
+# Detect remaining conflicts after the pre-migrated retarget.
 > "$tmp_conflicts"
 while IFS=$'\t' read -r src tgt; do
   if [[ -e "$repo/$tgt" ]]; then
@@ -93,6 +114,7 @@ conflicts=$(wc -l < "$tmp_conflicts" | tr -d ' ')
   echo "generator: ralph_propose_migration.sh"
   echo "based_on: migration/file-classification.md"
   echo "total_moves: $total_moves"
+  echo "archived_pre_migrated: $archived"
   echo "conflicts: $conflicts"
   echo "target_root: prompts/ralph-meta-chain"
   echo "risk_class: CRITICAL"
@@ -100,6 +122,11 @@ conflicts=$(wc -l < "$tmp_conflicts" | tr -d ' ')
   echo
   echo "# Proposed Moves"
   echo
+  if [[ $archived -gt 0 ]]; then
+    echo "> **$archived source(s) retargeted to _archive/_pre-migrated/**"
+    echo "> — destination already populated by an earlier round; the source becomes archive evidence."
+    echo
+  fi
   if [[ $conflicts -gt 0 ]]; then
     echo '> **CONFLICTS PRESENT** ('"$conflicts"' issue(s)).'
     echo '> See `migration/conflicts.md`. Apply will refuse until resolved.'

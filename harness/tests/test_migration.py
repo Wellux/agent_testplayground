@@ -99,6 +99,25 @@ class ClassifyAndPropose(unittest.TestCase):
         moves = (MIG_DIR / "proposed-moves.md").read_text()
         self.assertIn("# Proposed Moves", moves)
 
+    def test_propose_retargets_pre_migrated_to_archive(self) -> None:
+        """Pre-Round-8 audit: when a target path already exists (because
+        an earlier round superseded it), the source must be retargeted
+        to migration/_archive/_pre-migrated/ rather than reported as a
+        conflict. Round 6 shipped obsidian-plugin/, so every legacy
+        obsidian-ralph/ file should retarget."""
+        _run([str(SCRIPTS / "ralph_propose_migration.sh")])
+        moves = (MIG_DIR / "proposed-moves.md").read_text()
+        conflicts = (MIG_DIR / "conflicts.md").read_text()
+        self.assertIn(
+            "_archive/_pre-migrated/", moves,
+            "expected _archive/_pre-migrated/ retargets in proposed-moves.md",
+        )
+        self.assertIn(
+            "obsidian-ralph/", moves,
+            "obsidian-ralph/ should appear in retargeted moves",
+        )
+        self.assertIn("(none)", conflicts, "expected zero conflicts post-audit")
+
 
 class ApplyGates(unittest.TestCase):
     """Apply must refuse unless ALL six gates pass. CI never sets the
