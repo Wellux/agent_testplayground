@@ -124,6 +124,37 @@ class VoiceText(unittest.TestCase):
         self.assertEqual(r.status_code, 503, r.text)
         self.assertIn("whisper", r.json()["detail"].lower())
 
+    def test_same_second_captures_dont_overwrite(self) -> None:
+        """Regression: two requests in the same UTC second must both
+        persist. Pre-fix, the second write_text replaced the first."""
+        first = self.client.post(
+            "/ralph/voice",
+            data={"text": "first capture body", "source": "unit-test"},
+        )
+        second = self.client.post(
+            "/ralph/voice",
+            data={"text": "second capture body", "source": "unit-test"},
+        )
+        third = self.client.post(
+            "/ralph/voice",
+            data={"text": "third capture body", "source": "unit-test"},
+        )
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(third.status_code, 200)
+
+        # All three landed at distinct paths.
+        paths = {first.json()["wrote"], second.json()["wrote"], third.json()["wrote"]}
+        self.assertEqual(len(paths), 3, f"collision: {paths}")
+
+        # Each file's body matches its post.
+        bodies = []
+        for r in (first, second, third):
+            bodies.append((self.fx.vault / r.json()["wrote"]).read_text("utf8"))
+        self.assertIn("first capture body", bodies[0])
+        self.assertIn("second capture body", bodies[1])
+        self.assertIn("third capture body", bodies[2])
+
 
 class OriginGuard(unittest.TestCase):
     """Real guard exercised end-to-end. fastapi's TestClient sets the

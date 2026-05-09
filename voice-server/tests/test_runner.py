@@ -60,6 +60,41 @@ class FakeClaudeRunner(unittest.TestCase):
         self.assertTrue(result.promise_seen)
         self.assertEqual(result.iterations, 1)
 
+    def test_run_axis_runs_from_repo_root(self) -> None:
+        """Regression: the documented launchd plist starts voice-server
+        with cwd=voice-server/, so subprocess.run claude inherited that
+        cwd and the axis prompts (which read repo-relative paths like
+        prompts/ralph-meta-chain/config.yml) broke."""
+        # Replace fake claude with one that prints PWD then the promise.
+        marker = pathlib.Path(self.tmp) / "claude-pwd-check"
+        marker.write_text(
+            "#!/usr/bin/env bash\n"
+            "pwd\n"
+            "echo '<promise>COMPLETE</promise>'\n"
+            "exit 1\n"
+        )
+        marker.chmod(0o755)
+        os.environ["RALPH_CLAUDE_BIN"] = str(marker)
+
+        # Run from a different cwd to prove the runner overrides it.
+        prev_cwd = os.getcwd()
+        try:
+            scratch = pathlib.Path(self.tmp) / "elsewhere"
+            scratch.mkdir()
+            os.chdir(scratch)
+
+            from voice_server.runner import run_axis
+            result = asyncio.run(run_axis("memory", max_iterations=2, hard_timeout_s=20))
+        finally:
+            os.chdir(prev_cwd)
+
+        # claude printed pwd; the runner must have set cwd to repo root,
+        # not to the scratch dir.
+        self.assertIn(str(REPO), result.tail,
+                      f"expected repo root in pwd output; got tail: {result.tail!r}")
+        self.assertNotIn("/elsewhere", result.tail,
+                         f"runner inherited the wrong cwd: {result.tail!r}")
+
 
 if __name__ == "__main__":  # pragma: no cover
     unittest.main()

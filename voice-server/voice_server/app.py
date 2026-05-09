@@ -13,6 +13,7 @@ from __future__ import annotations
 import datetime as _dt
 import json
 import logging
+import os
 import pathlib
 import shutil
 from typing import Any
@@ -119,11 +120,32 @@ def create_app() -> FastAPI:
         else:
             raise HTTPException(status_code=400, detail="send `audio` (multipart) or `text` (form field)")
 
+        # Two captures arriving in the same UTC second (Shortcut retry,
+        # multi-device burst) would otherwise overwrite the first via
+        # write_text. Probe with a `-N` suffix until a free name is found,
+        # then create atomically with O_EXCL to close the TOCTOU window
+        # between probe and write.
         ts = _dt.datetime.now(_dt.UTC).strftime("%Y%m%dT%H%M%SZ")
-        out = inbox / f"voice-{ts}.md"
+        suffix_n = 0
+        out: pathlib.Path
+        fd = -1
+        while True:
+            name = f"voice-{ts}.md" if suffix_n == 0 else f"voice-{ts}-{suffix_n}.md"
+            out = inbox / name
+            try:
+                fd = os.open(str(out), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+                break
+            except FileExistsError:
+                suffix_n += 1
+                if suffix_n > 999:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"too many same-second captures at {ts}",
+                    )
+        capture_id = out.stem  # "voice-<ts>" or "voice-<ts>-N"
         frontmatter = (
             f"---\n"
-            f"id: voice-{ts}\n"
+            f"id: {capture_id}\n"
             f"type: voice-capture\n"
             f"source: {source}\n"
             f"used_whisper: {str(used_whisper).lower()}\n"
@@ -131,7 +153,8 @@ def create_app() -> FastAPI:
             f"tags: [voice, '#trending']\n"
             f"---\n\n"
         )
-        out.write_text(frontmatter + body_text + "\n", encoding="utf8")
+        with os.fdopen(fd, "w", encoding="utf8") as f:
+            f.write(frontmatter + body_text + "\n")
         return JSONResponse(content={"wrote": str(out.relative_to(vault)), "used_whisper": used_whisper})
 
     return app

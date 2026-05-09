@@ -153,6 +153,42 @@ class ReflectAppend(unittest.TestCase):
             p.write_text("# just a body, no frontmatter\n")
             self.assertFalse(_append_reflection(p, "x"))
 
+    def test_preserves_yaml_delimiter_when_reflections_is_last_line(self) -> None:
+        """Regression: shipped seed prompts have `reflections: []` as the
+        last frontmatter line. Without the trailing-newline normalize,
+        the rewrite would produce `... ok"---` (closing fence glued to
+        the new list item), corrupting the YAML."""
+        from harness.reflect import _append_reflection
+        with tempfile.TemporaryDirectory() as d:
+            p = pathlib.Path(d) / "shipped-shape.md"
+            # Match exactly what seed/50-Prompts/code-review.md ships with.
+            p.write_text(
+                "---\n"
+                "name: code-review\n"
+                "last_rewritten: 2026-05-09\n"
+                'validated_against: ["harness/fixtures/code-review.yml"]\n'
+                "bin: terse-strict\n"
+                "reflections: []\n"
+                "---\n"
+                "\n"
+                "# Review the diff below.\n"
+            )
+            self.assertTrue(_append_reflection(p, "[2026-05-09] terse rubric ok"))
+            text = p.read_text()
+            # Closing --- must be on its own line.
+            self.assertIn('"[2026-05-09] terse rubric ok"\n---\n', text,
+                          f"frontmatter corruption: {text!r}")
+            # Body must be untouched.
+            self.assertIn("# Review the diff below.\n", text)
+            # Round-trip yaml-load to be sure.
+            try:
+                import yaml
+            except ImportError:
+                return
+            front_end = text.index("\n---", 3)
+            front = yaml.safe_load(text[3:front_end])
+            self.assertEqual(front["reflections"], ["[2026-05-09] terse rubric ok"])
+
 
 class HeuristicVerdict(unittest.TestCase):
     def test_candidate_wins_when_better_rubric_and_fewer_tokens(self) -> None:

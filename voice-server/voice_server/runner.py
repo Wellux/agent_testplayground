@@ -8,7 +8,7 @@ import pathlib
 import shlex
 from dataclasses import dataclass
 
-from .config import claude_bin, ralph_dir
+from .config import claude_bin, ralph_dir, repo_root
 
 log = logging.getLogger(__name__)
 
@@ -60,10 +60,17 @@ async def run_axis(axis: str, *, max_iterations: int = 8, hard_timeout_s: int = 
             log.warning("axis=%s timed out at hard cap", axis)
             break
 
+        # Run claude from the repo root. Without an explicit cwd, the
+        # subprocess inherits voice-server's launch directory (typically
+        # `voice-server/` per the documented launchd plist), and the
+        # axis prompts that bootstrap by reading `prompts/ralph-meta-chain/
+        # config.yml` and other repo-relative paths break. Mirrors the
+        # plugin runner's repoRoot semantics.
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
+            cwd=str(repo_root()),
         )
         try:
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=remaining)

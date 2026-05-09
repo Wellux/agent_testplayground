@@ -126,7 +126,12 @@ def _append_reflection(path: pathlib.Path, reflection: str) -> bool:
     else:
         front = front.rstrip() + f'\nreflections:\n  - "{reflection}"\n'
 
-    path.write_text("---" + front + "---" + rest, encoding="utf8")
+    # Normalize: ensure exactly one trailing newline so the closing `---`
+    # always starts on its own line. Without this, when re.sub replaces
+    # the last frontmatter line (e.g. shipped `reflections: []` is on the
+    # final line before `---`), the rewritten frontmatter would
+    # concatenate `... ok"---`, corrupting the YAML for downstream parsers.
+    path.write_text("---" + front.rstrip("\n") + "\n---" + rest, encoding="utf8")
     return True
 
 
