@@ -87,3 +87,66 @@
 ## [2026-05-09T13:36:54Z] migration | op=inventory files=327
 ## [2026-05-09T13:36:55Z] migration | op=propose moves=64 conflicts=0
 ## [2026-05-09T13:36:56Z] migration | op=propose moves=64 conflicts=0
+## [2026-05-09T14:00:29Z] migration | op=inventory files=329
+## [2026-05-09T14:00:30Z] migration | op=classify classes=24
+## [2026-05-09T14:00:30Z] migration | op=propose moves=64 conflicts=0
+## [2026-05-09T14:00:43Z] migration | op=inventory files=329
+## [2026-05-09T14:00:44Z] migration | op=classify classes=24
+## [2026-05-09T14:00:44Z] migration | op=propose moves=64 conflicts=0
+## [2026-05-09T14:01:54Z] migration | op=inventory files=330
+## [2026-05-09T14:01:55Z] migration | op=classify classes=24
+## [2026-05-09T14:01:55Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:02:02Z] migration | op=inventory files=330
+## [2026-05-09T14:02:03Z] migration | op=classify classes=24
+## [2026-05-09T14:02:03Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:02:03Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:02:11Z] migration | op=inventory files=330
+## [2026-05-09T14:02:11Z] migration | op=classify classes=24
+## [2026-05-09T14:02:12Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:02:19Z] migration | op=inventory files=330
+## [2026-05-09T14:02:20Z] migration | op=classify classes=24
+## [2026-05-09T14:02:20Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:02:28Z] migration | op=inventory files=330
+## [2026-05-09T14:02:28Z] migration | op=classify classes=24
+## [2026-05-09T14:02:28Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:00Z] migration | op=inventory files=330
+## [2026-05-09T14:03:00Z] migration | op=classify classes=24
+## [2026-05-09T14:03:00Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:08Z] migration | op=inventory files=330
+## [2026-05-09T14:03:08Z] migration | op=classify classes=24
+## [2026-05-09T14:03:08Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:08Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:16Z] migration | op=inventory files=330
+## [2026-05-09T14:03:17Z] migration | op=classify classes=24
+## [2026-05-09T14:03:17Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:24Z] migration | op=inventory files=330
+## [2026-05-09T14:03:25Z] migration | op=classify classes=24
+## [2026-05-09T14:03:25Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:33Z] migration | op=inventory files=330
+## [2026-05-09T14:03:33Z] migration | op=classify classes=24
+## [2026-05-09T14:03:33Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:03:54Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:02Z] migration | op=inventory files=330
+## [2026-05-09T14:04:02Z] migration | op=classify classes=24
+## [2026-05-09T14:04:02Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:10Z] migration | op=inventory files=330
+## [2026-05-09T14:04:10Z] migration | op=classify classes=24
+## [2026-05-09T14:04:10Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:10Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:18Z] migration | op=inventory files=330
+## [2026-05-09T14:04:19Z] migration | op=classify classes=24
+## [2026-05-09T14:04:19Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:27Z] migration | op=inventory files=330
+## [2026-05-09T14:04:27Z] migration | op=classify classes=24
+## [2026-05-09T14:04:27Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:35Z] migration | op=inventory files=330
+## [2026-05-09T14:04:35Z] migration | op=classify classes=24
+## [2026-05-09T14:04:35Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:36Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:36Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:44Z] migration | op=inventory files=329
+## [2026-05-09T14:04:45Z] migration | op=classify classes=24
+## [2026-05-09T14:04:45Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:45Z] migration | op=propose moves=65 conflicts=0
+## [2026-05-09T14:04:53Z] migration | op=inventory files=330
+## [2026-05-09T14:04:53Z] migration | op=propose moves=65 conflicts=0

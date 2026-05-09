@@ -32,12 +32,60 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: bash -n
+      - name: bash -n every shell script in the repo
         run: |
           set -e
-          for f in scripts/install.sh scripts/uninstall.sh; do
-            echo "checking $f"
-            bash -n "$f"
+          fail=0
+          while IFS= read -r f; do
+            if ! bash -n "$f" 2>/dev/null; then
+              echo "::error::bash -n failed: $f"
+              fail=$((fail + 1))
+            fi
+          done < <(git ls-files '*.sh')
+          [[ $fail -eq 0 ]]
+
+  validators:
+    name: validators (Round 5 ralph_*.sh + Round 4 migration)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: provider-interface conformance (13 fields per adapter)
+        run: prompts/ralph-meta-chain/scripts/ralph_provider_validate.sh
+      - name: business-entity ledger schema
+        run: prompts/ralph-meta-chain/scripts/ralph_business_ledger_check.sh
+      - name: frontmatter (vault-template/)
+        env:
+          VAULT: ${{ github.workspace }}/prompts/ralph-meta-chain/vault-template
+        run: prompts/ralph-meta-chain/scripts/ralph_validate_frontmatter.sh
+      - name: wikilinks (vault-template/)
+        env:
+          VAULT: ${{ github.workspace }}/prompts/ralph-meta-chain/vault-template
+        run: prompts/ralph-meta-chain/scripts/ralph_check_links.sh
+      - name: migration read-only pipeline produces zero conflicts
+        run: |
+          set -e
+          prompts/ralph-meta-chain/migration/scripts/ralph_repo_inventory.sh
+          prompts/ralph-meta-chain/migration/scripts/ralph_classify_repo_files.sh
+          prompts/ralph-meta-chain/migration/scripts/ralph_propose_migration.sh
+          conflicts=$(grep -c '^- ' prompts/ralph-meta-chain/migration/conflicts.md || true)
+          if [[ "$conflicts" != "0" && -n "$conflicts" ]]; then
+            echo "::error::migration pipeline produced $conflicts conflict(s); apply gate would refuse"
+            cat prompts/ralph-meta-chain/migration/conflicts.md
+            exit 1
+          fi
+          echo "OK: migration pipeline → zero conflicts"
+      - name: schemas parse as JSON Schema draft-07
+        run: |
+          set -e
+          for f in prompts/ralph-meta-chain/config/*.schema.json; do
+            python3 -c "
+          import json, sys
+          d = json.load(open('$f'))
+          assert d.get('\$schema') == 'https://json-schema.org/draft-07/schema#', '$f: not draft-07'
+          assert d.get('\$id'), '$f: missing \$id'
+          assert d.get('title'), '$f: missing title'
+          print('OK:', '$f')
+          "
           done
 
   python:
