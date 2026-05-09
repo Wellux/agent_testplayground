@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import pathlib
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -163,6 +164,41 @@ class VoiceText(unittest.TestCase):
         self.assertIn("first capture body", bodies[0])
         self.assertIn("second capture body", bodies[1])
         self.assertIn("third capture body", bodies[2])
+
+    def test_voice_capture_frontmatter_passes_vault_validator(self) -> None:
+        """Codex round-5 P2: voice captures must include `ralph_type`
+        and `created` per memory-frontmatter.schema.json. Pre-fix the
+        voice-server only emitted `type: voice-capture`, so the FIRST
+        successful capture made vault diagnostics fail on the user's
+        own inbox."""
+        r = self.client.post(
+            "/ralph/voice",
+            data={"text": "validator-friendly capture", "source": "unit-test"},
+        )
+        self.assertEqual(r.status_code, 200, r.text)
+
+        # The vault must validate via ralph_validate_frontmatter.sh
+        # (which scans every *.md under $VAULT, excluding archive/etc).
+        validator = (
+            REPO / "prompts" / "ralph-meta-chain"
+            / "scripts" / "ralph_validate_frontmatter.sh"
+        )
+        env = {**os.environ, "VAULT": str(self.fx.vault)}
+        proc = subprocess.run(
+            [str(validator)],
+            env=env, capture_output=True, text=True, timeout=20, check=False,
+        )
+        self.assertEqual(
+            proc.returncode, 0,
+            f"validator failed:\nstdout={proc.stdout}\nstderr={proc.stderr}",
+        )
+
+        # Spot-check the actual frontmatter has the required fields.
+        wrote = self.fx.vault / r.json()["wrote"]
+        body = wrote.read_text("utf8")
+        self.assertIn("ralph_type: memory", body)
+        self.assertIn("memory_layer: raw", body)
+        self.assertIn("created: ", body)
 
 
 class OriginGuard(unittest.TestCase):
