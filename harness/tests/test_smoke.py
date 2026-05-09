@@ -265,6 +265,40 @@ class SelfTest(unittest.TestCase):
             self.assertEqual(row["name"], "privacy")
             self.assertTrue(row["ok"])
 
+    def test_only_short_circuits_other_checks(self) -> None:
+        """Regression: --only=privacy must NOT run _check_unit_tests
+        (which would re-discover SelfTest and recurse for minutes)."""
+        from harness import self_test as st
+
+        called: list[str] = []
+        original_unit = st._check_unit_tests
+        original_plugin = st._check_plugin
+
+        def boom_unit(_repo):
+            called.append("unit-tests")
+            raise AssertionError("unit-tests check should not run when only=privacy")
+
+        def boom_plugin(_repo):
+            called.append("plugin")
+            raise AssertionError("plugin check should not run when only=privacy")
+
+        st._CHECK_REGISTRY["unit-tests"] = boom_unit  # type: ignore[assignment]
+        st._CHECK_REGISTRY["plugin"] = boom_plugin     # type: ignore[assignment]
+        try:
+            with tempfile.TemporaryDirectory() as d:
+                vault = pathlib.Path(d) / "vault"
+                (vault / "90-Meta").mkdir(parents=True)
+                rc = st.run(
+                    only="privacy",
+                    vault_override=str(vault),
+                    config_path=str(REPO / "prompts" / "ralph-meta-chain" / "config.yml"),
+                )
+            self.assertEqual(rc, 0)
+            self.assertEqual(called, [])
+        finally:
+            st._CHECK_REGISTRY["unit-tests"] = original_unit
+            st._CHECK_REGISTRY["plugin"] = original_plugin
+
 
 class CreatorRender(unittest.TestCase):
     def test_render_creators_groups_by_handle(self) -> None:

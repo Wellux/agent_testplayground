@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
+from typing import Callable
 
 from . import load_config, resolve_vault
 
@@ -143,14 +144,30 @@ def _check_plugin(repo: pathlib.Path) -> CheckResult:
     )
 
 
-def _all_checks(repo: pathlib.Path) -> list[CheckResult]:
-    return [
-        _check_privacy(repo),
-        _check_shell(repo),
-        _check_python(repo),
-        _check_unit_tests(repo),
-        _check_plugin(repo),
-    ]
+# Each check is registered as (name, function) so `run(only=...)` can invoke
+# only the requested check without running the rest first. Previously
+# `_all_checks` ran every check eagerly and then filtered the result list,
+# which caused recursion: `_check_unit_tests` re-discovers this module's
+# `SelfTest` test class, which calls `run(only="privacy")`, which then ran
+# the full set again — looping until cron timeout.
+_CHECK_REGISTRY: dict[str, "Callable[[pathlib.Path], CheckResult]"] = {
+    "privacy":    _check_privacy,
+    "shell":      _check_shell,
+    "python":     _check_python,
+    "unit-tests": _check_unit_tests,
+    "plugin":     _check_plugin,
+}
+
+CHECK_NAMES = tuple(_CHECK_REGISTRY)
+
+
+def _selected_checks(only: str | None, repo: pathlib.Path) -> list[CheckResult]:
+    if only is None:
+        return [fn(repo) for fn in _CHECK_REGISTRY.values()]
+    fn = _CHECK_REGISTRY.get(only)
+    if fn is None:
+        return []
+    return [fn(repo)]
 
 
 def run(
@@ -163,12 +180,10 @@ def run(
     vault = resolve_vault(vault_override, cfg)
     repo = _repo_root()
 
-    checks = _all_checks(repo)
-    if only:
-        checks = [c for c in checks if c.name == only]
-        if not checks:
-            log.error("no check named %r; valid: privacy, shell, python, unit-tests, plugin", only)
-            return 64
+    checks = _selected_checks(only, repo)
+    if not checks:
+        log.error("no check named %r; valid: %s", only, ", ".join(CHECK_NAMES))
+        return 64
 
     out_path = vault / "90-Meta" / "heal-checks.ndjson"
     out_path.parent.mkdir(parents=True, exist_ok=True)
