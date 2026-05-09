@@ -163,7 +163,7 @@ jobs:
         working-directory: prompts/ralph-meta-chain/obsidian-plugin
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
