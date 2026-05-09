@@ -60,3 +60,10 @@ prompts/ralph-meta-chain/migration/conflicts.md
 prompts/ralph-meta-chain/migration/migration-log.md
 prompts/ralph-meta-chain/migration/ci-backup-*.yml
 prompts/ralph-meta-chain/migration/snapshot-*.txt
+
+# Experiment runtime artifacts (Round 7) — auto-generated.
+# .gitkeep + the README in each directory are tracked; everything else
+# is volatile.
+prompts/ralph-meta-chain/experiments/outputs/*
+!prompts/ralph-meta-chain/experiments/outputs/.gitkeep
+prompts/ralph-meta-chain/experiments/reports/report-*.md
