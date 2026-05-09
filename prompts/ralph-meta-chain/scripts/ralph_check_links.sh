@@ -50,13 +50,28 @@ find "$target" -type f -name '*.md' \
     done | sort -u > "$namelist"
 
 fail=0
+# Placeholders to skip:
+#   [[<…>]]                 angle-bracket template syntax
+#   [[wikilink]] / [[wikilinks]]   meta-talk in docs
 while IFS= read -r f; do
   while IFS= read -r link; do
     [[ -z "$link" ]] && continue
-    # Strip subpath / anchor fragments (e.g. "[[foo|bar]]" → "foo").
+
+    # Skip angle-bracket placeholders (template syntax).
+    case "$link" in
+      "<"*">") continue ;;
+    esac
+
+    # Strip subpath / anchor / display-text fragments (e.g. "[[foo|bar]]" → "foo").
     target_name="${link%%|*}"
     target_name="${target_name%%#*}"
     target_name="${target_name##*/}"   # basename only
+
+    # Skip meta-talk: docs that literally say "[[wikilinks]]".
+    case "$target_name" in
+      wikilink|wikilinks) continue ;;
+    esac
+
     if ! grep -qxF "$target_name" "$namelist"; then
       printf '%s → broken link [[%s]]\n' "${f#"$target/"}" "$link" >&2
       fail=$((fail + 1))

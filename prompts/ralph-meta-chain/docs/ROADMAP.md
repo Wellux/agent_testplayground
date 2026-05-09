@@ -11,15 +11,15 @@ explicitly retires it).
 
 ### Round 1 — Research + 18 design docs ✓
 
-**Status:** in flight (this commit set).
+**Status:** shipped.
 
 Output: `research/RESEARCH_NOTES.md`, `RESEARCH_SYNTHESIS.md`,
 `github-watchlist.md`, `trend-scout.md`, `source-quality-rubric.md`,
 plus 18 docs/. ~25 files. Pure Markdown.
 
-### Round 2 — Vault-template expansion
+### Round 2 — Vault-template expansion ✓
 
-**Status:** planned.
+**Status:** shipped (commit on `claude/ralph-obsidian-cron-jobs-Mb4A9`).
 
 Output: full `vault-template/00_System/` through `99_Archive/` tree per
 master spec. Existing `seed/` content is preserved; vault-template
@@ -45,9 +45,9 @@ Files (~50 Markdown placeholders + 5 control panels):
 `scripts/install.sh seed_vault()` extends to copy from vault-template if
 present, falling back to `seed/`.
 
-### Round 3 — Business-entity scaffold
+### Round 3 — Business-entity scaffold ✓
 
-**Status:** planned.
+**Status:** shipped (commit on `claude/ralph-obsidian-cron-jobs-Mb4A9`).
 
 Output: full `business-entity/` Markdown tree per master spec. **No
 scripts; no execution.** Only documents drafts and ledgers.
@@ -64,9 +64,9 @@ Round 3 must NOT activate any business autonomy. Per
 `BUSINESS_ENTITY_SCOPE.md`, "send externally" is CRITICAL and never
 autonomous.
 
-### Round 4 — Migration tooling + provider scaffold
+### Round 4 — Migration tooling + provider scaffold ✓
 
-**Status:** planned.
+**Status:** shipped (commit on `claude/ralph-obsidian-cron-jobs-Mb4A9`).
 
 Output (split into two commits):
 
@@ -89,9 +89,9 @@ Output (split into two commits):
 Migration `--apply` stays gated behind explicit invocation per
 `APPROVAL_GATES.md`.
 
-### Round 5 — Bash shims + JSON schemas + bats stubs
+### Round 5 — Bash shims + JSON schemas + bats stubs ✓
 
-**Status:** planned.
+**Status:** shipped (commit on `claude/ralph-obsidian-cron-jobs-Mb4A9`).
 
 Output:
 
@@ -122,9 +122,9 @@ Output:
 Round 5 adds bats to the CI workflow (gated; bats not currently in CI
 image).
 
-### Round 6 — Plugin rebuild + commands + skills + hooks
+### Round 6 — Plugin rebuild + commands + skills + hooks ✓
 
-**Status:** planned.
+**Status:** shipped (commit on `claude/ralph-obsidian-cron-jobs-Mb4A9`).
 
 Output:
 
@@ -138,9 +138,9 @@ Output:
 - `prompts/ralph-meta-chain/hooks/` examples (pre-tool-use, post-tool-use,
   session-end, notification).
 
-### Round 7 — Indexes + benchmarks + experiments
+### Round 7 — Indexes + benchmarks + experiments ✓
 
-**Status:** planned.
+**Status:** shipped (commit on `claude/ralph-obsidian-cron-jobs-Mb4A9`).
 
 Output:
 

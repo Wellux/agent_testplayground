@@ -1,3 +1,12 @@
+---
+ralph_type: system
+memory_layer: system
+memory_temperature: hot
+created: 2026-05-09
+status: active
+summary: "Canonical first-day vault tree per master spec; folder overview."
+---
+
 # vault-template/
 
 Canonical first-day vault tree per the master spec. `scripts/install.sh`

@@ -33,7 +33,7 @@ SORT axis ASC
 
 ## Quick links
 
-- Pending approvals → [[Pending Approvals]] in `07_Business/ledgers/`
+- Pending approvals → [[pending-approvals]] in `07_Business/`
 - Open escalations → `60-Interactions/escalations.md`
 - This week's autoupdate → `00-Inbox/futuretools-YYYY-Www.md`
 - This week's autoevolve proposals → `30-Notes/<id>-evolve-*.md`

@@ -1,4 +1,8 @@
 ---
+ralph_type: skill
+memory_layer: procedural
+created: 2026-05-09
+status: template
 name: <slug>
 description: |
   Triggers: "<phrase 1>", "<phrase 2>", "<phrase 3>"
