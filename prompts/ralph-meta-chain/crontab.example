@@ -1,0 +1,54 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Ralph meta-chain — daily Claude Code cron jobs
+#
+# Order matters: research → memory → skills → interaction (compressor runs
+# every hour at :30 regardless).
+#   - research seeds the inbox  with GitHub-trending repos for the topics
+#   - memory   promotes inbox → atomic notes; updates MOCs; embeds new notes
+#   - skills   synthesizes Claude Code skills from repeated patterns
+#   - interaction A/B-tests prompt rewrites against feedback log
+#   - compress hourly: summarize bloated notes, keep the wiki shapely
+#
+# Each daily entry wraps the prompt in a tight Ralph loop ("Wiggum technique":
+# `until ! cat PROMPT | claude-code`). The prompt exits non-zero — or emits
+# <promise>COMPLETE</promise> — when its loop predicate trips:
+#   - budget hit
+#   - zero writes this pass (idempotent no-op)
+#   - $VAULT/90-Meta/STOP exists
+#
+# `timeout` is the hard ClaudeClaw guardrail. `max_iterations` (default 8) is
+# the Anthropic ralph-wiggum safety cutoff, mirrored as the `i` counter.
+#
+# Install:   ../../scripts/install.sh             (Linux: cron, macOS: launchd)
+# Uninstall: ../../scripts/uninstall.sh
+# Tail:      tail -f /var/log/ralph.log
+# ─────────────────────────────────────────────────────────────────────────────
+
+SHELL=/bin/bash
+PATH=/usr/local/bin:/usr/bin:/bin
+RALPH=/path/to/repo/prompts/ralph-meta-chain
+LOG=/var/log/ralph.log
+
+# 0) Research — pull GitHub trending for our topic list (runs first)
+0 1 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/04-research-ingest.md)"      || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 1) Memory — Karpathy LLM-Wiki ingest/lint over 00-Inbox/ + last 7 daily notes
+0 2 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/01-memory-optimizer.md)"     || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 2) Skills — synthesize Claude Code skills from repeated action patterns
+0 3 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/02-skills-optimizer.md)"     || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 3) Interaction — A/B-test prompt rewrites against feedback log (calls harness ab)
+0 4 * * * timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/03-interaction-optimizer.md)" || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# ★) Compress — hourly at :30; capped at 10 minutes; budget-bounded
+30 * * * * timeout 10m bash -c 'i=0; until ! claude -p "$(cat $RALPH/05-compress.md)"            || [ $((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+
+# 6) Autoheal — every 6 hours (Nate Herk supervisor pattern)
+15 */6 * * * timeout 10m bash -c 'i=0; until ! claude -p "$(cat $RALPH/06-autoheal.md)"          || [ $((i+=1)) -ge 4 ]; do :; done' >> $LOG 2>&1
+
+# 7) Autoevolve — weekly Sunday 05:00 UTC (Alex Finn ruthless iteration)
+0 5 * * 0 timeout 30m bash -c 'i=0; until ! claude -p "$(cat $RALPH/07-autoevolve.md)"           || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1
+
+# 8) Autoupdate — weekly Monday 06:00 UTC (Matt Wolfe FutureTools weekly scan)
+0 6 * * 1 timeout 25m bash -c 'i=0; until ! claude -p "$(cat $RALPH/08-autoupdate.md)"           || [ $((i+=1)) -ge 8 ]; do :; done' >> $LOG 2>&1

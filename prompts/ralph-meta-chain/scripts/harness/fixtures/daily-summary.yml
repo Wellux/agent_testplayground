@@ -1,0 +1,29 @@
+# Promptfoo-shaped fixture for prompt-rewrite A/B on daily-summary.
+description: daily-summary prompt evaluation
+
+prompts:
+  - file://../../prompts/ralph-meta-chain/03-interaction-optimizer.md  # placeholder reference
+
+tests:
+  - description: short-day no decisions
+    vars:
+      transcript: |
+        - 09:14 stand-up
+        - 11:02 bug triage
+        - 14:30 read paper on RAG bench
+    assert:
+      - { type: max-tokens,    value: 250 }
+      - { type: not-contains,  value: "Great question" }
+      - { type: not-contains,  value: "Let's break this down" }
+
+  - description: dense-day with decisions
+    vars:
+      transcript: |
+        - 08:00 reviewed PR #42, blocked on CI
+        - 10:15 decision: drop SQLite WAL mode for scratch dir
+        - 13:00 paired on cache invalidation
+        - 17:45 hypothesis: token cost regression in 4.7
+    assert:
+      - { type: max-tokens,    value: 450 }
+      - { type: contains,      value: "Decisions" }
+      - { type: not-contains,  value: "I hope" }

@@ -1,0 +1,7 @@
+# Placeholder. Per-run output captures land here:
+#
+#   outputs/<fixture>-<UTC-ts>/incumbent.txt
+#   outputs/<fixture>-<UTC-ts>/candidate.txt
+#   outputs/<fixture>-<UTC-ts>/judge-response.json
+#
+# Everything inside this directory (other than .gitkeep) is gitignored.

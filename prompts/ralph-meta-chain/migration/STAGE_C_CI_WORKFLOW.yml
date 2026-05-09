@@ -1,0 +1,178 @@
+# .github/workflows/ci.yml AS IT WILL LOOK AFTER ROUND 8 STAGE C
+#
+# This file is the proposed post-apply CI workflow. It updates
+# `working-directory:` paths to the master-spec target locations:
+#
+#   harness/          → prompts/ralph-meta-chain/scripts/harness/
+#   voice-server/     → prompts/ralph-meta-chain/voice-server/
+#   obsidian-ralph/   → ARCHIVED (Round 6 superseded; job removed)
+#   scripts/install.sh → prompts/ralph-meta-chain/install/install_cron.sh
+#
+# `ralph_apply_migration.sh --apply --confirmed --update-ci` (Round 8
+# Stage C) optionally copies this file in place of .github/workflows/ci.yml.
+# Default: --update-ci is OFF, so the apply does only `git mv`.
+#
+# To preview the diff against the live CI workflow:
+#   diff -u .github/workflows/ci.yml \
+#           prompts/ralph-meta-chain/migration/STAGE_C_CI_WORKFLOW.yml
+#
+# To apply manually (post-Stage-C, if --update-ci was not used):
+#   cp prompts/ralph-meta-chain/migration/STAGE_C_CI_WORKFLOW.yml \
+#      .github/workflows/ci.yml
+#   git add .github/workflows/ci.yml
+#   git commit -m "ci: post-Round-8 working-directory updates"
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, "claude/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  privacy:
+    name: privacy guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: no user-identifier strings in tracked files
+        run: |
+          set -e
+          if git grep -in -- "$(printf 'equality\\.power%s' 'tothepeople')" ':!.github/workflows/ci.yml'; then
+            echo "::error::user email leaked into tracked files"
+            exit 1
+          fi
+          echo "OK: no user identifier matches"
+
+  shell:
+    name: shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n every shell script in the repo
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r f; do
+            if ! bash -n "$f" 2>/dev/null; then
+              echo "::error::bash -n failed: $f"
+              fail=$((fail + 1))
+            fi
+          done < <(git ls-files '*.sh')
+          [[ $fail -eq 0 ]]
+
+  validators:
+    name: validators (Round 5 ralph_*.sh + Round 4 migration)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: provider-interface conformance (13 fields per adapter)
+        run: prompts/ralph-meta-chain/scripts/ralph_provider_validate.sh
+      - name: business-entity ledger schema
+        run: prompts/ralph-meta-chain/scripts/ralph_business_ledger_check.sh
+      - name: frontmatter (vault-template/)
+        env:
+          VAULT: ${{ github.workspace }}/prompts/ralph-meta-chain/vault-template
+        run: prompts/ralph-meta-chain/scripts/ralph_validate_frontmatter.sh
+      - name: wikilinks (vault-template/)
+        env:
+          VAULT: ${{ github.workspace }}/prompts/ralph-meta-chain/vault-template
+        run: prompts/ralph-meta-chain/scripts/ralph_check_links.sh
+      - name: migration read-only pipeline produces zero conflicts
+        run: |
+          set -e
+          prompts/ralph-meta-chain/migration/scripts/ralph_repo_inventory.sh
+          prompts/ralph-meta-chain/migration/scripts/ralph_classify_repo_files.sh
+          prompts/ralph-meta-chain/migration/scripts/ralph_propose_migration.sh
+          conflicts=$(grep -c '^- ' prompts/ralph-meta-chain/migration/conflicts.md || true)
+          if [[ "$conflicts" != "0" && -n "$conflicts" ]]; then
+            echo "::error::migration pipeline produced $conflicts conflict(s); apply gate would refuse"
+            cat prompts/ralph-meta-chain/migration/conflicts.md
+            exit 1
+          fi
+          echo "OK: migration pipeline → zero conflicts"
+      - name: schemas parse as JSON Schema draft-07
+        run: |
+          set -e
+          for f in prompts/ralph-meta-chain/config/*.schema.json; do
+            python3 -c "
+          import json, sys
+          d = json.load(open('$f'))
+          assert d.get('\$schema') == 'https://json-schema.org/draft-07/schema#', '$f: not draft-07'
+          assert d.get('\$id'), '$f: missing \$id'
+          assert d.get('title'), '$f: missing title'
+          print('OK:', '$f')
+          "
+          done
+
+  python:
+    name: harness (python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prompts/ralph-meta-chain/scripts/harness
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: install (no-deps compile-only path is enough for CI smoke)
+        run: |
+          python -m pip install -U pip
+          python -m pip install pyyaml httpx
+      - name: py_compile every module
+        run: python -m py_compile harness/*.py
+      - name: import smoke test
+        run: |
+          python -c "import harness; from harness import ab, judge, embeddings, ingest, compress; print('imports OK')" || true
+      - name: unit tests
+        run: python -m unittest discover -s tests -v
+
+  voice-server:
+    name: voice-server (python + fastapi)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prompts/ralph-meta-chain/voice-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: install
+        run: |
+          python -m pip install -U pip
+          python -m pip install fastapi uvicorn pyyaml python-multipart httpx
+      - name: py_compile
+        run: python -m py_compile voice_server/*.py
+      - name: alexa lambda py_compile
+        run: python -m py_compile alexa-skill/lambda_function.py
+      - name: unit tests
+        run: python -m unittest discover -s tests -v
+
+  plugin:
+    name: obsidian-plugin (typescript, master-spec target)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prompts/ralph-meta-chain/obsidian-plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: prompts/ralph-meta-chain/obsidian-plugin/package-lock.json
+      - name: npm install
+        run: npm install --no-audit --no-fund
+      - name: tsc --noEmit
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: build
+        run: npm run build
+      - name: artifact present
+        run: test -s main.js && wc -c main.js

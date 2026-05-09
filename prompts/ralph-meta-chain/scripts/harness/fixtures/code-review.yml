@@ -1,0 +1,42 @@
+# Promptfoo-shaped fixture for prompt-rewrite A/B on code-review.
+# Run via:
+#   harness ab --incumbent  $VAULT/50-Prompts/code-review.md \
+#              --candidate  $VAULT/50-Prompts/code-review.candidate.md \
+#              --fixture    harness/fixtures/code-review.yml
+description: code-review prompt evaluation
+
+prompts:
+  - file://../../prompts/ralph-meta-chain/03-interaction-optimizer.md  # placeholder reference
+
+tests:
+  - description: trivial flush() change
+    vars:
+      diff: |
+        diff --git a/foo.py b/foo.py
+        --- a/foo.py
+        +++ b/foo.py
+        @@ -1,3 +1,3 @@
+         def emit(x):
+        -    print(x)
+        +    print(x, flush=True)
+    assert:
+      - { type: max-tokens,    value: 600 }
+      - { type: not-contains,  value: "Great question" }
+      - { type: not-contains,  value: "I'd be happy" }
+      - { type: contains,      value: "flush" }
+
+  - description: missing error handling
+    vars:
+      diff: |
+        diff --git a/api.py b/api.py
+        --- a/api.py
+        +++ b/api.py
+        @@ -10,4 +10,5 @@
+         def get(url):
+        -    return requests.get(url).json()
+        +    r = requests.get(url, timeout=10)
+        +    return r.json()
+    assert:
+      - { type: max-tokens,    value: 800 }
+      - { type: not-contains,  value: "Certainly!" }
+      - { type: contains,      value: "timeout" }

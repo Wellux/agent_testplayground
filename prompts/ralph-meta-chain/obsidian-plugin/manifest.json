@@ -1,0 +1,9 @@
+{
+  "id": "ralph-meta-chain",
+  "name": "Ralph Meta Chain",
+  "version": "0.2.0",
+  "minAppVersion": "1.5.0",
+  "description": "Greenfield Obsidian plugin for the Ralph Meta Chain. Command palette + status bar + log/metrics/control-panel views; spawns claude -p and python -m harness for local-first operation. No external auth.",
+  "author": "Ralph Meta Chain",
+  "isDesktopOnly": true
+}

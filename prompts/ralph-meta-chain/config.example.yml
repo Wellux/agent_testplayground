@@ -1,0 +1,100 @@
+# Ralph meta-chain config — copy to config.yml (gitignored) and edit.
+#
+# Inspirations baked in:
+#   - Anthropic ralph-wiggum plugin: max_iterations + promise_token contract
+#   - ghuntley/how-to-ralph-wiggum: "same prompt, mutating workspace"
+#   - snarktank/ralph: spec-as-exit-criterion (the budget block IS the spec)
+#   - karpathy/autoresearch: fixed time-budget per experiment
+#   - Karpathy LLM Wiki gist: index.md + log.md mandatory; ingest/query/lint
+#   - NousResearch/hermes-agent: skills-from-experience pattern
+#   - obra/knowledge-graph: sqlite-vec + FTS5 single-file storage
+#   - swarmclaw: explicit allow/deny permissions list
+#   - moazbuilds/claudeclaw: cron-daemon framing
+#   - promptfoo/promptfoo: declarative YAML fixtures for A/B harness
+
+vault_path: ~/Obsidian/SecondBrain
+repo_path:  ~/code/agent_testplayground
+model:      claude-sonnet-4-6
+log_level:  info
+
+ralph:
+  max_iterations: 8                   # ralph-wiggum safety cutoff per cron firing
+  hard_time_cap_minutes: 25           # outer `timeout` in crontab for daily prompts
+  compress_time_cap_minutes: 10       # outer `timeout` for hourly compressor
+  experiment_minutes: 5               # autoresearch fixed budget per A/B
+  promise_token: COMPLETE             # emit <promise>COMPLETE</promise> to exit
+  stop_file: 90-Meta/STOP             # touch to halt on next invocation
+
+budgets:
+  memory:      { max_promotions: 10, max_mocs: 3, max_hypotheses: 5 }
+  skills:      { max_new: 3, max_amended: 5, max_hypotheses: 5 }
+  interaction: { max_user_profile_updates: 1, max_prompt_rewrites: 5, max_ab_experiments: 3 }
+  research:    { max_repos: 30, max_inbox_files: 1 }
+  compress:    { max_compressions: 5, max_weekly_rollups: 1, token_threshold: 4000 }
+  heal:        { max_fixes: 3, max_escalations: 5 }
+  evolve:      { max_proposals: 5, max_population_spawn: 3 }
+  update:      { max_release_feeds: 12, max_bump_proposals: 5, max_news_items: 10 }
+
+trailing_window_days: 7
+dry_run: false
+
+# Embeddings — local-first via Ollama (no external embedding endpoint by default)
+# Memory backend selection (2026 landscape):
+#   local-sqlite-vec   default — sqlite-vec + FTS5, obra/knowledge-graph schema
+#   cognee             local-first graph reasoning over unstructured docs (cognee-ai/cognee)
+#   letta              OS-style tiered memory for long-running agents (letta-ai/letta)
+# Source comparison: Atlan / vectorize.io / n1n.ai 2026 surveys; LongMemEval shows
+# Zep at 63.8% vs Mem0 49.0%, Letta wins for multi-day agents, Cognee for local graph.
+embeddings:
+  backend:  local-sqlite-vec          # local-sqlite-vec | cognee | letta
+  provider: ollama
+  base_url: http://localhost:11434
+  model:    nomic-embed-text          # 768 dims; replace with your favourite local model
+  db_path:  90-Meta/embeddings.db     # only used by local-sqlite-vec
+  reindex_on_startup: false
+
+# Research ingest topics for prompt #04 — extend freely.
+research_topics:
+  - ai
+  - coding-harness
+  - meta-prompting
+  - meta-agent
+  - openclaw
+  - hermes
+  - claude-code
+  - codex
+  - ai-studio
+  - ralph-wiggum
+  - autoresearch
+  - obsidian-second-brain
+  - agent-memory
+  - dspy
+  - gepa
+  - gsd
+  - omx
+
+# Harness CLI — Python, lives at $REPO/harness/
+harness:
+  python: uv                          # or "python3 -m"
+  fixtures_dir: harness/fixtures      # promptfoo-shaped YAML
+  judge_model: claude-sonnet-4-6      # rubric LLM judge
+
+# Permissions allowlist — tightened for Phase 2 local CLIs.
+permissions:                          # swarmclaw-style
+  allow:
+    - "Read(**)"
+    - "Write($VAULT/**)"
+    - "Edit($VAULT/**)"
+    - "Bash(mkdir:*,grep:*,find:*,wc:*,jq:*,git status,git log:*,test:*,touch:*,mv:*)"
+    - "Bash(uv:*,python:*,python3:*,node:*,npm:*)"
+    - "Bash(harness:*,ollama:*)"
+    - "Agent(Explore)"
+    - "Agent(general-purpose)"
+    - "TodoWrite"
+  deny:
+    - "Bash(rm:*)"
+    - "Bash(git push:*)"
+    - "Bash(git reset:*)"
+    - "Bash(curl:*)"
+    - "Bash(wget:*)"
+    - "Bash(ssh:*)"

@@ -1,0 +1,5 @@
+# Placeholder so git tracks this directory.
+#
+# Real fixtures live under harness/fixtures/ (Phase 1-6) or
+# prompts/ralph-meta-chain/scripts/harness/fixtures/ (after Round 8).
+# This directory is reserved for symlinks / locally-staged fixtures.
