@@ -68,30 +68,35 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 
 # ── Seed first-day vault content ────────────────────────────────────────────
-seed_vault() {
-  local seed_src="$RALPH/seed"
-  if [[ ! -d "$seed_src" ]]; then
-    echo "[install] no seed/ directory; skipping seed step"
+# Sources, in order. Each is `cp -n` (never overwrites; later sources fill
+# gaps the earlier sources didn't cover):
+#   1. seed/             — Phase 1-6 starter (CLAUDE.md, day-1 skills, fixtures)
+#   2. vault-template/   — Round 2 master-spec layout (00_System/ … 99_Archive/)
+seed_one() {
+  local label="$1"; local src="$2"
+  if [[ ! -d "$src" ]]; then
+    echo "[install] no $label/ directory; skipping"
     return
   fi
   if [[ $DRY_RUN -eq 1 ]]; then
-    echo "── DRY RUN — would seed (cp -n) from $seed_src into $VAULT ──"
-    (cd "$seed_src" && find . -type f | sed "s|^\\./|  $VAULT/|")
+    echo "── DRY RUN — would seed (cp -n) from $src into $VAULT ──"
+    (cd "$src" && find . -type f | sed "s|^\\./|  $VAULT/|")
     return
   fi
-  # cp -n = never overwrite. Honors existing user content.
-  (cd "$seed_src" && find . -type f -exec sh -c '
-    src="$1"; rel="${src#./}"; dst="'"$VAULT"'/$rel"
+  # cp -n = never overwrite. Honors existing user content + earlier seeds.
+  (cd "$src" && find . -type f -exec sh -c '
+    src_file="$1"; rel="${src_file#./}"; dst="'"$VAULT"'/$rel"
     mkdir -p "$(dirname "$dst")"
     if [ -f "$dst" ]; then
       echo "[install] keep existing $dst"
     else
-      cp "$src" "$dst" && echo "[install] seeded $dst"
+      cp "$src_file" "$dst" && echo "[install] seeded ('"$label"') $dst"
     fi
   ' _ {} \;)
 }
 
-seed_vault
+seed_one seed             "$RALPH/seed"
+seed_one vault-template   "$RALPH/vault-template"
 
 OS="$(uname -s)"
 LOG="${RALPH_LOG:-$HOME/.ralph.log}"
