@@ -3,7 +3,9 @@ description: |
   Triggers: "ralph migration plan", "migration dry run", "what would Round 8 do"
 allowed-tools:
   - "Read"
-  - "Bash(harness:*,git:*,bash:*)"
+  - "Bash(prompts/ralph-meta-chain/migration/scripts/ralph_repo_inventory.sh:*)"
+  - "Bash(prompts/ralph-meta-chain/migration/scripts/ralph_classify_repo_files.sh:*)"
+  - "Bash(prompts/ralph-meta-chain/migration/scripts/ralph_propose_migration.sh:*)"
 ---
 
 # /ralph-migration-plan

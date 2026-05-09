@@ -213,3 +213,5 @@ jobs:
         run: python -m py_compile prompts/ralph-meta-chain/mcp-server/ralph_mcp_server.py
       - name: protocol smoke tests
         run: python prompts/ralph-meta-chain/tests/test_mcp_server.py -v
+      - name: auto-approval contract
+        run: python prompts/ralph-meta-chain/tests/test_auto_approval_contract.py -v
