@@ -3,11 +3,30 @@
 [![CI](https://github.com/Wellux/agent_testplayground/actions/workflows/ci.yml/badge.svg?branch=claude%2Fralph-obsidian-cron-jobs-Mb4A9)](https://github.com/Wellux/agent_testplayground/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Local-first, Claude-Code-primary, Obsidian-backed self-improving agent.
-Eight cron prompts run UTC daily; each one mines the previous run's
-traces, hypothesizes improvements, runs cheap A/B experiments, and
-rewrites the agent's own substrate (memory, skills, interactions,
-prompts).
+Local-first, **Claude-Code- and Codex-CLI-ready**, Obsidian-backed
+self-improving agent. Eight cron prompts run UTC daily; each one mines
+the previous run's traces, hypothesizes improvements, runs cheap A/B
+experiments, and rewrites the agent's own substrate (memory, skills,
+interactions, prompts).
+
+## Get running in 10 minutes
+
+| Coding agent | Quick-start guide |
+| --- | --- |
+| **Claude Code** | [`docs/QUICKSTART_CLAUDE_CODE.md`](prompts/ralph-meta-chain/docs/QUICKSTART_CLAUDE_CODE.md) |
+| **OpenAI Codex CLI** | [`docs/QUICKSTART_CODEX.md`](prompts/ralph-meta-chain/docs/QUICKSTART_CODEX.md) |
+
+Or skip straight to the unified installer:
+
+```bash
+git clone https://github.com/Wellux/agent_testplayground.git
+cd agent_testplayground
+prompts/ralph-meta-chain/install/install.sh --target all --dry-run
+prompts/ralph-meta-chain/install/install.sh --target all
+```
+
+For the full picture, read the [PRD](prompts/ralph-meta-chain/docs/PRD.md);
+to take over as maintainer, read the [HANDOFF](prompts/ralph-meta-chain/docs/HANDOFF.md).
 
 > Memory model lifted from Karpathy's LLM-Wiki (raw → wiki → schema).
 > Prompt evolution lifted from GEPA × MAP-Elites × Reflexion.

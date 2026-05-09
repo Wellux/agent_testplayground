@@ -5,6 +5,12 @@ until the work is done. A **meta-chain** points that loop at the agent itself:
 each pass mines the day's traces, distills lessons into the Obsidian vault,
 and rewrites the prompts/skills/playbooks the next run will execute.
 
+> **New here?** Pick your coding agent and follow the quick-start:
+> [Claude Code (10 min)](docs/QUICKSTART_CLAUDE_CODE.md) ·
+> [Codex CLI (10 min)](docs/QUICKSTART_CODEX.md) ·
+> [PRD (15 min)](docs/PRD.md) ·
+> [Handoff (20 min)](docs/HANDOFF.md)
+
 Three drafts live in this folder. Run them once a day, in order, against the
 same vault.
 

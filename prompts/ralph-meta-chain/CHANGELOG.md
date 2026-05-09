@@ -16,6 +16,101 @@ phased rebuild plan.
 
 ---
 
+## Round 11 (2026-05-09) — Launch documentation
+
+Four new top-level docs to make the chain genuinely usable by someone
+who hasn't been in the conversation history:
+
+- **`docs/QUICKSTART_CLAUDE_CODE.md`** — git-clone-to-running guide
+  for Claude Code. Prerequisites, 6-step path, troubleshooting, vault
+  setup, optional cron registration. Targets <10 min from clone to
+  first `/ralph-cron` invocation.
+- **`docs/QUICKSTART_CODEX.md`** — same for OpenAI Codex CLI. Mirrors
+  the Claude Code guide; documents Codex-specific differences
+  (skills > prompts, no hooks, no Agent tool).
+- **`docs/PRD.md`** — product requirements: problem statement, 6
+  goals + 5 non-goals, 3 personas, user journey, architecture
+  diagram, surface counts, success metrics (qualitative + quantitative),
+  approval classes, 5 open questions for the next maintainer.
+- **`docs/HANDOFF.md`** — comprehensive handoff for the next person:
+  current state matrix, test counts (~204 cases), CI state, Kilo +
+  Codex bot review history, 8 backlog items ordered by leverage with
+  size estimates + designs, how-to-extend recipes (new axis, new MCP
+  tool, new install target, new specialist skill), pointer index.
+
+Plus updated entry points:
+- top-level `README.md` — adds the quick-starts table at the top
+- `prompts/ralph-meta-chain/README.md` — adds the new-here banner
+
+## Round 10.4 (2026-05-09) — Codex P2-3 + P2-4 fixes
+
+Two real correctness bugs in the Codex installer caught by the
+Codex-bot review.
+
+### P2-3: Codex prompts leaked to user-global `~/.codex/`
+
+`install_codex.sh --scope project` (or vault) wrote prompts to the
+user-global `$CODEX_HOME/prompts/` instead of the scoped install
+target. Two consequences:
+1. A "supposedly scoped install" silently mutated user-global Codex
+   slash commands.
+2. The scoped manifest then OWNED those global symlinks, so
+   uninstalling a project install would remove user-global prompts.
+
+Fix: `PROMPTS_DIR + TOML_FILE + MANIFEST_DIR` derived from `$SCOPE`
+in a single case statement so all four artefact paths
+(skills/prompts/toml/briefing) live under the same root per scope:
+
+| Scope | Skills | Prompts | TOML |
+| --- | --- | --- | --- |
+| user | `~/.agents/skills/` | `~/.codex/prompts/` | `~/.codex/config.toml` |
+| project | `<repo>/.agents/skills/` | `<repo>/.codex/prompts/` | `<repo>/.codex/config.toml` |
+| vault | `<vault>/.agents/skills/` | `<vault>/.codex/prompts/` | `<vault>/.codex/config.toml` |
+
+### P2-4: Uninstaller unconditionally stripped user-global config.toml
+
+For project/vault installs, `WITH_MCP=no` (skips MCP) but the
+uninstaller still always called `strip_mcp` against
+`$CODEX_HOME/config.toml` — clobbering an unrelated user-scope MCP
+block.
+
+Fix: uninstaller reads the manifest's `with_mcp` and `toml_file` fields.
+`strip_mcp()` short-circuits if `with_mcp == false`. Empty-dir
+cleanup also became scope-aware so we never `rmdir $CODEX_HOME` on a
+project uninstall.
+
+### Tests added
+
+`test_install_codex.bats` regression cases #20 and #21 (now 21/21):
+
+- #20 pre-seeds `$CODEX_HOME/prompts/my-personal.md`, runs project
+  install, asserts user-global still contains ONLY `my-personal.md`.
+- #21 pre-seeds `$CODEX_HOME/config.toml` with a manually-managed
+  `[mcp_servers.ralph]` block, runs project install + uninstall,
+  asserts sha256 unchanged before / after / between, asserts uninstaller
+  emits `manifest says with_mcp=false` skip line.
+
+## Round 10.3 (2026-05-09) — Codex P2-2 follow-up: self-test side effects
+
+`ralph_self_test` MCP tool said "read-only" but `harness self-test`
+appends one row per check to `$VAULT/90-Meta/heal-checks.ndjson`.
+
+Fix: added `--no-log` flag to `harness self-test`. MCP tool always
+passes it (hardcoded into argv). The cron-owned `06-autoheal` axis
+keeps the default logged mode for its audit trail.
+
+## Round 10.2 (2026-05-09) — Codex P2-1 + P2-2 fixes
+
+P2-1: install_codex.sh TOML merge could produce duplicate
+`[mcp_servers.ralph]` tables (invalid TOML) when a user had a
+manually-set or older-installer block without the marker comment.
+Fixed: strip in two passes (marker-tagged + bare).
+
+P2-2: `ralph_migration_dry_run` MCP tool advertised as read-only but
+underlying script writes proposal Markdown. Fixed: tool description
+now explicitly lists every file written + how to revert via
+`git restore prompts/ralph-meta-chain/migration/`.
+
 ## Round 10.1 (2026-05-09) — MCP bug fixes + unified dispatcher
 
 Three follow-ups on Rounds 9 + 10:
