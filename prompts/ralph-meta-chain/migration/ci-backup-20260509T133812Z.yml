@@ -1,0 +1,132 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main, "claude/**"]
+
+permissions:
+  contents: read
+
+jobs:
+  privacy:
+    name: privacy guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: no user-identifier strings in tracked files
+        # The Phase 1/2 plan committed (in good faith) that the user's email
+        # never lands in any file. Enforce that here.
+        # The pathspec excludes this workflow file itself so the literal
+        # below doesn't self-match.
+        run: |
+          set -e
+          if git grep -in -- "$(printf 'equality\\.power%s' 'tothepeople')" ':!.github/workflows/ci.yml'; then
+            echo "::error::user email leaked into tracked files"
+            exit 1
+          fi
+          echo "OK: no user identifier matches"
+
+  shell:
+    name: shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n
+        run: |
+          set -e
+          for f in scripts/install.sh scripts/uninstall.sh; do
+            echo "checking $f"
+            bash -n "$f"
+          done
+
+  python:
+    name: harness (python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: harness
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: install (no-deps compile-only path is enough for CI smoke)
+        run: |
+          python -m pip install -U pip
+          python -m pip install pyyaml httpx
+      - name: py_compile every module
+        run: python -m py_compile harness/*.py
+      - name: import smoke test
+        run: |
+          python -c "import harness; from harness import ab, judge, embeddings, ingest, compress; print('imports OK')" || true
+      - name: unit tests
+        run: python -m unittest discover -s tests -v
+
+  voice-server:
+    name: voice-server (python + fastapi)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: voice-server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: install
+        run: |
+          python -m pip install -U pip
+          python -m pip install fastapi uvicorn pyyaml python-multipart httpx
+      - name: py_compile
+        run: python -m py_compile voice_server/*.py
+      - name: alexa lambda py_compile
+        run: python -m py_compile alexa-skill/lambda_function.py
+      - name: unit tests
+        run: python -m unittest discover -s tests -v
+
+  plugin:
+    name: obsidian-ralph (typescript, Phase 1-6 reference)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: obsidian-ralph
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: obsidian-ralph/package-lock.json
+      - name: npm ci
+        run: npm ci --no-audit --no-fund
+      - name: tsc --noEmit
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: build
+        run: npm run build
+      - name: artifact present
+        run: test -s main.js && wc -c main.js
+
+  plugin-greenfield:
+    name: obsidian-plugin (typescript, Round 6 greenfield)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prompts/ralph-meta-chain/obsidian-plugin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: prompts/ralph-meta-chain/obsidian-plugin/package-lock.json
+      - name: npm install
+        run: npm install --no-audit --no-fund
+      - name: tsc --noEmit
+        run: npx tsc --noEmit -p tsconfig.json
+      - name: build
+        run: npm run build
+      - name: artifact present
+        run: test -s main.js && wc -c main.js
