@@ -96,14 +96,22 @@ you on Linux (cron) or macOS (launchd) and seeds the vault from `seed/` +
 ## Wiring as an interactive surface (Claude Code or Codex)
 
 Cron is *background*. To make the chain available *interactively* from inside
-your coding agent of choice, run the matching installer:
+your coding agent of choice, use the unified dispatcher:
 
 ```bash
-# Claude Code
-prompts/ralph-meta-chain/install/install_claude_code.sh
+# Single entry point — pick target(s) explicitly:
+prompts/ralph-meta-chain/install/install.sh --target all
+prompts/ralph-meta-chain/install/install.sh --target claude-code,codex
+prompts/ralph-meta-chain/install/install.sh --target codex --dry-run
+prompts/ralph-meta-chain/install/install.sh --target all --uninstall
 
-# OpenAI Codex CLI
+# Forward installer-specific flags after `--`:
+prompts/ralph-meta-chain/install/install.sh --target codex -- --without-mcp
+
+# Or call the per-target installers directly:
+prompts/ralph-meta-chain/install/install_claude_code.sh
 prompts/ralph-meta-chain/install/install_codex.sh
+prompts/ralph-meta-chain/install/install_cron.sh
 ```
 
 Both wire the same conceptual surface (slash commands, skills, MCP server,

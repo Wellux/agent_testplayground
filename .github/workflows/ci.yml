@@ -199,6 +199,7 @@ jobs:
           bats prompts/ralph-meta-chain/tests/test_round7_indexes_benchmarks.bats
           bats prompts/ralph-meta-chain/tests/test_install_claude_code.bats
           bats prompts/ralph-meta-chain/tests/test_install_codex.bats
+          bats prompts/ralph-meta-chain/tests/test_install_dispatcher.bats
 
   mcp-server:
     name: ralph-mcp-server (python stdio)

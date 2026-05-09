@@ -203,12 +203,16 @@ def tool_ralph_query(args: dict[str, Any]) -> dict[str, Any]:
     cmd = _harness_cmd()
     if cmd is None:
         return _err("harness CLI not found on PATH and no local checkout")
+    # The harness CLI uses `--k` for the result count (not --limit).
     rc, out, err = _run_subprocess(
-        cmd + ["query", "--semantic", query, "--limit", str(limit)],
+        cmd + ["query", "--semantic", query, "--k", str(limit)],
         timeout=30,
     )
     if rc != 0:
-        return _err(f"harness query failed (rc={rc}): {err.strip() or out.strip()}")
+        return _err(
+            f"harness query failed (rc={rc}): {err.strip() or out.strip()}\n"
+            "Hint: the local Ollama embedding endpoint may not be reachable."
+        )
     return _text(out.strip() or "_(no results)_")
 
 
@@ -263,14 +267,35 @@ def tool_ralph_self_test(args: dict[str, Any]) -> dict[str, Any]:
 
 
 def tool_ralph_migration_dry_run(args: dict[str, Any]) -> dict[str, Any]:
-    cmd = _harness_cmd()
-    if cmd is None:
-        return _err("harness CLI not found on PATH and no local checkout")
-    rc, out, err = _run_subprocess(
-        cmd + ["migration", "propose", "--dry-run"], timeout=60
-    )
+    # Migration is owned by shell scripts under migration/scripts/; the
+    # harness CLI doesn't expose a `migration` subcommand. The propose
+    # script generates Markdown proposals + conflict reports without
+    # moving any file (MEDIUM risk per the script's own header).
+    root = _ralph_root()
+    propose = os.path.join(root, "migration", "scripts", "ralph_propose_migration.sh")
+    if not os.path.exists(propose):
+        return _err(f"propose script not found at {propose}")
+    rc, out, err = _run_subprocess(["bash", propose], timeout=120)
     body = (out + err).strip() or "_(no output)_"
-    return _text(f"```\n{body}\n```")
+    suffix = ""
+    proposed = os.path.join(root, "migration", "proposed-moves.md")
+    conflicts = os.path.join(root, "migration", "conflicts.md")
+    if os.path.exists(proposed):
+        try:
+            with open(proposed, encoding="utf-8", errors="replace") as f:
+                lines = [ln for ln in f.readlines() if ln.startswith("- ")]
+            suffix += f"\n\n**Proposed moves:** {len(lines)}"
+        except OSError:
+            pass
+    if os.path.exists(conflicts):
+        try:
+            with open(conflicts, encoding="utf-8", errors="replace") as f:
+                lines = [ln for ln in f.readlines() if ln.startswith("- ")]
+            if lines:
+                suffix += f"\n**Conflicts:** {len(lines)} (apply gate would refuse)"
+        except OSError:
+            pass
+    return _text(f"```\n{body}\n```{suffix}")
 
 
 TOOL_IMPL = {

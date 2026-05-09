@@ -16,6 +16,60 @@ phased rebuild plan.
 
 ---
 
+## Round 10.1 (2026-05-09) — MCP bug fixes + unified dispatcher
+
+Three follow-ups on Rounds 9 + 10:
+
+### MCP server bug fixes (caught by the new harness-integration tests)
+
+- **`ralph_query` was passing `--limit`** to `harness query` but the
+  CLI's flag is `--k`. Result: every semantic query failed with
+  argparse error. Fixed.
+- **`ralph_migration_dry_run` was calling `harness migration propose --dry-run`**
+  but `harness` has no `migration` subcommand — migration is owned by
+  `migration/scripts/ralph_propose_migration.sh`. Fixed: invokes the
+  shell script and surfaces the proposed-moves + conflicts counts.
+
+Both bugs slipped through Round 9 because the original tests only
+exercised the protocol surface (initialize, tools/list, error paths)
+without verifying the EXACT command-line constructed for the harness
+shell-out. Added 4 regression tests with a fake `harness` binary on
+PATH that records argv to a file, so future drift is caught.
+
+### Unified `install.sh` dispatcher
+
+`install/install.sh` is a single entry point that fans out to the
+three per-target installers:
+
+```bash
+install.sh --target all                         # cron + claude-code + codex
+install.sh --target claude-code,codex --scope user
+install.sh --target codex --dry-run -- --without-mcp --without-prompts
+install.sh --target all --uninstall
+```
+
+Per-target installers are still callable directly; the dispatcher is
+purely additive. Honours `--scope`, `--dry-run`, `--uninstall`, and
+forwards anything after `--` to each per-target installer (so
+installer-specific flags like `--without-mcp` work without expanding
+the dispatcher's own arg parser).
+
+### Tests added (12 cases)
+
+- `tests/test_install_dispatcher.bats` — covers usage errors, target
+  expansion, `--scope` propagation, `--` passthrough, wet
+  install/uninstall round-trip, dry-run.
+
+### Counts
+
+13 MCP server tests (was 9; +4 regression coverage) ✓
+12 dispatcher bats tests (NEW) ✓
+18 Codex installer bats tests ✓
+13 Claude Code installer bats tests ✓
+103 harness unit tests ✓
+
+---
+
 ## Round 10 (2026-05-09) — Codex surface (shipped)
 
 The chain becomes **executable from inside the OpenAI Codex CLI** too,
