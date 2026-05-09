@@ -1,0 +1,70 @@
+version: 2
+updates:
+  # Python: harness CLI
+  - package-ecosystem: "pip"
+    directory: "/prompts/ralph-meta-chain/scripts/harness"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+      - "harness"
+    commit-message:
+      prefix: "deps(harness)"
+    pull-request-branch-name:
+      separator: "-"
+
+  # Python: voice-server
+  - package-ecosystem: "pip"
+    directory: "/prompts/ralph-meta-chain/voice-server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "python"
+      - "voice-server"
+    commit-message:
+      prefix: "deps(voice-server)"
+
+  # Node / TypeScript: obsidian-plugin
+  - package-ecosystem: "npm"
+    directory: "/prompts/ralph-meta-chain/obsidian-plugin"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "npm"
+      - "obsidian-plugin"
+    commit-message:
+      prefix: "deps(plugin)"
+    ignore:
+      # Obsidian API is a peer-dep; pin updates to user-controlled minor bumps.
+      - dependency-name: "obsidian"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions versions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Etc/UTC"
+    open-pull-requests-limit: 3
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci(actions)"
