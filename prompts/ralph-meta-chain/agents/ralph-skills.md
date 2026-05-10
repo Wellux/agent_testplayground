@@ -54,6 +54,16 @@ Run the daily skills pass per
 
 `<promise>COMPLETE</promise>` on budget-hit or zero new patterns.
 
+## Metrics (B1)
+
+After completing the pass, record one invocation row so autoevolve
+has data to fitness-test against:
+
+    harness metrics record --skill ralph-skills --ok --axis skills [--tokens N]
+
+Use `--fail` instead of `--ok` if the pass exited with a tool error
+or budget overflow. See `docs/HANDOFF.md` § B1.
+
 ## Cross-references
 
 - `prompts/ralph-meta-chain/02-skills-optimizer.md`

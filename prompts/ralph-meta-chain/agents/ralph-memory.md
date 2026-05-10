@@ -57,6 +57,16 @@ Emit `<promise>COMPLETE</promise>` when budget is hit OR pass writes
 zero (no inbox; no candidates above threshold). Exit non-zero only
 on a tool error you can't recover from.
 
+## Metrics (B1)
+
+After completing the pass, record one invocation row so autoevolve
+has data to fitness-test against:
+
+    harness metrics record --skill ralph-memory --ok --axis memory [--tokens N]
+
+Use `--fail` instead of `--ok` if the pass exited with a tool error
+or budget overflow. See `docs/HANDOFF.md` § B1.
+
 ## Cross-references
 
 - `prompts/ralph-meta-chain/01-memory-optimizer.md`

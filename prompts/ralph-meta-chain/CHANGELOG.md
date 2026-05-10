@@ -16,6 +16,85 @@ phased rebuild plan.
 
 ---
 
+## Round 12 (2026-05-09) — B1: skill metrics infrastructure
+
+Wires the `metrics: { invocations, success_rate, mean_tokens }` stub
+that's been on every skill's frontmatter since Round 6 to actual data.
+Until now the autoevolve axis (07) fired weekly with no signal because
+nothing was populating the metrics. This round closes that gap.
+
+### `harness metrics` subcommand (new)
+
+```bash
+# Record one invocation:
+harness metrics record --skill ralph-memory --ok --tokens 1234 --ms 4500 --axis memory
+
+# Aggregate trailing 7 days (default):
+harness metrics roll-up --window 7
+
+# Programmatic consumption (for autoevolve):
+harness metrics roll-up --window 7 --format json
+```
+
+`record` appends a `kind: "skill_invocation"` row to the existing
+`$VAULT/90-Meta/metrics.ndjson` (no new file; coexists with existing
+per-axis run rows via the `kind` namespacing).
+
+`roll-up` reads the file, filters `kind == skill_invocation`, applies
+the window, aggregates per skill (invocations, successes, failures,
+success_rate, mean_tokens, median_ms, p95_ms, last_invoked), and
+renders Markdown table or JSON.
+
+### Module: `harness/metrics.py` (~210 LoC, stdlib only)
+
+- `record(vault, *, skill, ok, tokens?, ms?, axis?, ts?)` → row dict
+- `roll_up(vault, *, window_days=7, now=None)` → `{skill: stats}`
+- `render_markdown(rollup)` → table sorted by invocations desc
+- `render_json(rollup)` → indented JSON for autoevolve
+
+Robust to: empty file, malformed JSON lines, bad timestamps, unknown
+`kind` values (per-axis runs ignored), single-element lists for
+quantiles.
+
+### 8 axis subagents updated
+
+Each `agents/ralph-<axis>.md` now has a `## Metrics (B1)` section
+instructing the subagent to call `harness metrics record --skill
+ralph-<axis> --ok --axis <axis>` at end of pass. The `--axis`
+mapping uses the budget axis name (so `ralph-autoheal` → `--axis
+heal`, matching `config.yml: budgets.heal`).
+
+### Tests (16 new cases, all green)
+
+`scripts/harness/tests/test_metrics.py`:
+  - `TestRecord` (4): row shape, optional fields, explicit ts/axis,
+    rejects empty skill name
+  - `TestRollUp` (6): empty vault, aggregation correctness, window
+    filtering, kind filtering (axis-run rows ignored), tolerates
+    malformed lines, last_invoked = max ts
+  - `TestRendering` (3): empty, sort order, JSON round-trip
+  - `TestCLI` (3): record + roll-up round trip, --ok/--fail required,
+    md format default
+
+CI's `harness (python)` job auto-discovers the new test file via
+`unittest discover`.
+
+### Why this matters
+
+The autoevolve axis's fitness contract requires per-axis metrics.
+Without B1, `harness metrics roll-up --format json` would have been
+empty and autoevolve had nothing to compare. With B1, after one week
+of cron firings, autoevolve will have:
+  - per-axis invocation counts (volume signal)
+  - success rates (reliability signal)
+  - mean tokens / p95 ms (cost signal)
+  - last_invoked timestamps (staleness detection)
+
+That's the four-vector input autoevolve was designed to consume.
+HANDOFF.md backlog item B1 → done.
+
+---
+
 ## Round 11 (2026-05-09) — Launch documentation
 
 Four new top-level docs to make the chain genuinely usable by someone

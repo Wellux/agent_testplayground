@@ -59,6 +59,16 @@ Run the weekly Monday autoupdate pass per
 
 `<promise>COMPLETE</promise>` on Monday after one pass.
 
+## Metrics (B1)
+
+After completing the pass, record one invocation row so autoevolve
+has data to fitness-test against:
+
+    harness metrics record --skill ralph-update --ok --axis update [--tokens N]
+
+Use `--fail` instead of `--ok` if the pass exited with a tool error
+or budget overflow. See `docs/HANDOFF.md` § B1.
+
 ## Cross-references
 
 - `prompts/ralph-meta-chain/08-autoupdate.md`

@@ -58,7 +58,7 @@ If you do nothing else, do these in order:
 
 | Suite | Cases | File |
 | --- | --- | --- |
-| Harness unit | 103 + 1 new | `prompts/ralph-meta-chain/scripts/harness/tests/` |
+| Harness unit | 104 + 16 (B1 metrics) | `prompts/ralph-meta-chain/scripts/harness/tests/` |
 | Voice-server unit | 12 | `prompts/ralph-meta-chain/voice-server/tests/` |
 | MCP server protocol | 14 | `prompts/ralph-meta-chain/tests/test_mcp_server.py` |
 | Claude Code installer bats | 13 | `prompts/ralph-meta-chain/tests/test_install_claude_code.bats` |
@@ -154,25 +154,30 @@ If you need to understand:
 
 Ordered by leverage. Top item is highest expected value.
 
-### B1. Wire skill metrics infrastructure (4-8h)
+### B1. ~~Wire skill metrics infrastructure~~ ✅ done (Round 12)
 
-**Problem:** Every skill has `metrics: { invocations, success_rate,
-mean_tokens }` in frontmatter, but no code populates them. Autoevolve
-(axis 7) currently has nothing to fitness-test against.
+**Shipped:** `harness metrics record` + `harness metrics roll-up`
+subcommands. Rows live in the existing `$VAULT/90-Meta/metrics.ndjson`
+with a `kind: "skill_invocation"` namespace (no new file).
 
-**Proposed design:**
+```bash
+harness metrics record --skill ralph-memory --ok --tokens 1234 --ms 4500 --axis memory
+harness metrics roll-up --window 7 --format json
+```
 
-1. Add `harness metrics record --skill <name> [--ok|--fail] [--tokens N] [--ms N]`
-   subcommand that appends one line to `$VAULT/90-Meta/skill-metrics.ndjson`.
-2. Add `harness metrics roll-up [--window 7d] [--write-frontmatter]`
-   that aggregates and (optionally) updates each skill's frontmatter.
-3. Wire the Claude Code `PostToolUse` hook to detect skill invocations
-   and call `harness metrics record` automatically.
-4. (Codex has no equivalent hook surface — skills can call it inline.)
+8 axis subagents updated with `## Metrics (B1)` sections instructing
+them to call `harness metrics record` at end of pass. 16 new unit
+tests in `scripts/harness/tests/test_metrics.py`.
 
-**Why this matters:** unblocks autoevolve to make data-driven
-mutation proposals. Without it, evolve fires weekly and proposes
-nothing useful.
+**Deferred to a follow-up (next session):**
+- `--write-frontmatter` mode: roll-up writes back into each skill's
+  frontmatter `metrics:` block. Skipped because not all skills have
+  the block (the 8 axis subagents in `agents/` don't); design choice
+  for which skills get the field is a separate decision.
+- Auto-detection via Claude Code `PostToolUse` hook: skipped because
+  hook fires for tool calls, not skill loads, and would record
+  unrelated tool durations. Explicit `harness metrics record` call
+  from each subagent's instruction is more reliable.
 
 ### B2. Per-folder compress thresholds (2h)
 
