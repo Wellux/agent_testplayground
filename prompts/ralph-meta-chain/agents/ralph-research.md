@@ -44,6 +44,16 @@ Emit `<promise>COMPLETE</promise>` on stdout when the pass either
 hits its budget cap or has zero new arrivals (no-op). Exit non-zero
 on any external-fetch error after one retry; the cron loop will halt.
 
+## Metrics (B1)
+
+After completing the pass, record one invocation row so autoevolve
+has data to fitness-test against:
+
+    harness metrics record --skill ralph-research --ok --axis research [--tokens N]
+
+Use `--fail` instead of `--ok` if the pass exited with a tool error
+or budget overflow. See `docs/HANDOFF.md` § B1.
+
 ## Cross-references
 
 - `prompts/ralph-meta-chain/04-research-ingest.md` (procedure)

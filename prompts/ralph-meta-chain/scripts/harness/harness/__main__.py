@@ -10,9 +10,11 @@ from . import ab as ab_mod
 from . import compress as compress_mod
 from . import embeddings as embeddings_mod
 from . import ingest as ingest_mod
+from . import metrics as metrics_mod
 from . import reflect as reflect_mod
 from . import self_test as self_test_mod
 from . import traces as traces_mod
+from . import load_config, resolve_vault
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -67,6 +69,20 @@ def _build_parser() -> argparse.ArgumentParser:
                       help="run a single check: privacy | shell | python | unit-tests | plugin")
     p_st.add_argument("--no-log", action="store_true",
                       help="skip the heal-checks.ndjson append (truly read-only mode for MCP / dashboards)")
+
+    p_m = sub.add_parser("metrics", help="Skill-invocation tracking + roll-up (B1)")
+    m_sub = p_m.add_subparsers(dest="metrics_cmd", required=True)
+    m_rec = m_sub.add_parser("record", help="Append one skill invocation to metrics.ndjson")
+    m_rec.add_argument("--skill", required=True, help="skill name (e.g. ralph-memory, memory-architect)")
+    m_rec_g = m_rec.add_mutually_exclusive_group(required=True)
+    m_rec_g.add_argument("--ok", action="store_true", help="invocation succeeded")
+    m_rec_g.add_argument("--fail", action="store_true", help="invocation failed")
+    m_rec.add_argument("--tokens", type=int, default=None, help="token count consumed")
+    m_rec.add_argument("--ms", type=int, default=None, help="duration in milliseconds")
+    m_rec.add_argument("--axis", default=None, help="optional: which axis the skill wraps (memory|skills|...|update)")
+    m_roll = m_sub.add_parser("roll-up", help="Aggregate skill_invocation rows + render")
+    m_roll.add_argument("--window", type=int, default=7, help="trailing window in days (default: 7; 0 = all)")
+    m_roll.add_argument("--format", choices=("md", "json"), default="md", help="output format")
 
     return parser
 
@@ -152,6 +168,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             config_path=args.config,
             no_log=args.no_log,
         )
+    if args.cmd == "metrics":
+        cfg = load_config(args.config)
+        vault = resolve_vault(args.vault, cfg)
+        if args.metrics_cmd == "record":
+            row = metrics_mod.record(
+                vault,
+                skill=args.skill,
+                ok=args.ok,
+                tokens=args.tokens,
+                ms=args.ms,
+                axis=args.axis,
+            )
+            # Echo back so callers (subagents, hooks) can confirm.
+            print(f"recorded: {row['skill']} ok={row['ok']}", file=sys.stderr)
+            return 0
+        if args.metrics_cmd == "roll-up":
+            rollup = metrics_mod.roll_up(vault, window_days=args.window)
+            if args.format == "json":
+                print(metrics_mod.render_json(rollup))
+            else:
+                print(metrics_mod.render_markdown(rollup))
+            return 0
+        return 64
     return 64
 
 

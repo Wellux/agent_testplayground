@@ -60,6 +60,17 @@ Run the weekly autoevolve pass per
 `<promise>COMPLETE</promise>` on Sunday after one pass. Idempotent
 within the same week.
 
+## Metrics (B1)
+
+After completing the pass, record one invocation row so autoevolve
+has data to fitness-test against (yes — autoevolve fitness-tests
+itself too):
+
+    harness metrics record --skill ralph-evolve --ok --axis evolve [--tokens N]
+
+Use `--fail` instead of `--ok` if the pass exited with a tool error
+or budget overflow. See `docs/HANDOFF.md` § B1.
+
 ## Cross-references
 
 - `prompts/ralph-meta-chain/07-autoevolve.md`

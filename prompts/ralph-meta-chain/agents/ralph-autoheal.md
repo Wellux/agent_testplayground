@@ -61,6 +61,17 @@ is hit. Exit non-zero if `harness self-test` itself errors out
 catastrophically (the cron loop will halt and the next pass picks
 up).
 
+## Metrics (B1)
+
+After completing the pass, record one invocation row so autoevolve
+has data to fitness-test against:
+
+    harness metrics record --skill ralph-autoheal --ok --axis heal [--tokens N]
+
+Use `--fail` instead of `--ok` if the pass exited with a tool error
+or budget overflow. (Note `--axis heal`, not `autoheal`: matches the
+budget axis name in `config.yml`.) See `docs/HANDOFF.md` § B1.
+
 ## Cross-references
 
 - `prompts/ralph-meta-chain/06-autoheal.md`
